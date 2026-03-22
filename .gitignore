@@ -1,0 +1,6 @@
+sistema/client/node_modules
+sistema/client/dist
+sistema/server/node_modules
+sistema/server/dist
+*.log
+.env
