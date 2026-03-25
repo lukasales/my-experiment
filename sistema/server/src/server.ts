@@ -89,6 +89,19 @@ app.post('/questions', (req, res) => {
   res.status(201).json(question);
 });
 
+app.delete('/questions/:id', (req, res) => {
+  const { id } = req.params;
+  const targetIndex = questions.findIndex((question) => question.id === id);
+
+  if (targetIndex === -1) {
+    res.status(404).json({ message: 'Unable to remove question' });
+    return;
+  }
+
+  questions.splice(targetIndex, 1);
+  res.status(204).send();
+});
+
 const PORT = 3001;
 
 app.listen(PORT, () => {

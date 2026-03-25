@@ -25,6 +25,7 @@ function App() {
   ])
   const [validationMessage, setValidationMessage] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [removeErrorMessage, setRemoveErrorMessage] = useState<string | null>(null)
 
   const fetchQuestions = async () => {
     try {
@@ -112,6 +113,24 @@ function App() {
     }
   }
 
+  const handleRemoveQuestion = async (id: string) => {
+    try {
+      setRemoveErrorMessage(null)
+
+      const response = await fetch(`http://localhost:3001/questions/${id}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('Request failed')
+      }
+
+      setQuestions((previous) => previous.filter((question) => question.id !== id))
+    } catch {
+      setRemoveErrorMessage('Unable to remove question.')
+    }
+  }
+
   if (loading) {
     return <p>Loading...</p>
   }
@@ -166,6 +185,9 @@ function App() {
         {questions.map((question) => (
           <li key={question.id}>
             <h2>{question.statement}</h2>
+            <button type="button" onClick={() => void handleRemoveQuestion(question.id)}>
+              Remove
+            </button>
 
             <ul>
               {question.alternatives.map((alternative, index) => (
@@ -175,6 +197,8 @@ function App() {
           </li>
         ))}
       </ul>
+
+      {removeErrorMessage && <p>{removeErrorMessage}</p>}
     </main>
   )
 }
