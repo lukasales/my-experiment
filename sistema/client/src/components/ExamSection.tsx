@@ -1,16 +1,23 @@
 import { useEffect, useState } from 'react'
-import { createExam, getExams } from '../services/exams'
+import { createExam, getExams, updateExam } from '../services/exams'
+import { getQuestions } from '../services/questions'
 import type { AnswerMode, Exam } from '../types/exam'
+import type { Question } from '../types/question'
 import { ExamList } from './ExamList'
 
 export function ExamSection() {
   const [exams, setExams] = useState<Exam[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [questions, setQuestions] = useState<Question[]>([])
   const [title, setTitle] = useState('')
   const [answerMode, setAnswerMode] = useState<AnswerMode>('letters')
   const [validationMessage, setValidationMessage] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [editingExamId, setEditingExamId] = useState<string | null>(null)
+  const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>([])
+  const [linkValidationMessage, setLinkValidationMessage] = useState<string | null>(null)
+  const [linkSubmitting, setLinkSubmitting] = useState(false)
 
   const fetchExams = async () => {
     try {
@@ -28,6 +35,19 @@ export function ExamSection() {
 
   useEffect(() => {
     void fetchExams()
+  }, [])
+
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      try {
+        const data = await getQuestions()
+        setQuestions(data)
+      } catch {
+        setQuestions([])
+      }
+    }
+
+    void fetchQuestions()
   }, [])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -54,6 +74,51 @@ export function ExamSection() {
       setValidationMessage('Could not create exam. Please try again.')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleStartLink = (exam: Exam) => {
+    setEditingExamId(exam.id)
+    setSelectedQuestionIds(exam.questionIds)
+    setLinkValidationMessage(null)
+  }
+
+  const handleCancelLink = () => {
+    setEditingExamId(null)
+    setSelectedQuestionIds([])
+    setLinkValidationMessage(null)
+  }
+
+  const handleToggleQuestion = (questionId: string, checked: boolean) => {
+    setSelectedQuestionIds((previous) => {
+      if (checked) {
+        return previous.includes(questionId) ? previous : [...previous, questionId]
+      }
+
+      return previous.filter((id) => id !== questionId)
+    })
+  }
+
+  const handleSaveQuestionLinks = async (examId: string) => {
+    if (selectedQuestionIds.length === 0) {
+      setLinkValidationMessage('Please select at least one question.')
+      return
+    }
+
+    try {
+      setLinkSubmitting(true)
+      setLinkValidationMessage(null)
+
+      const updatedExam = await updateExam(examId, {
+        questionIds: selectedQuestionIds,
+      })
+
+      setExams((previous) => previous.map((exam) => (exam.id === examId ? updatedExam : exam)))
+      handleCancelLink()
+    } catch {
+      setLinkValidationMessage('Could not save question selection. Please try again.')
+    } finally {
+      setLinkSubmitting(false)
     }
   }
 
@@ -87,7 +152,20 @@ export function ExamSection() {
         {validationMessage && <p>{validationMessage}</p>}
       </form>
 
-      <ExamList exams={exams} loading={loading} error={error} />
+      <ExamList
+        exams={exams}
+        questions={questions}
+        loading={loading}
+        error={error}
+        editingExamId={editingExamId}
+        selectedQuestionIds={selectedQuestionIds}
+        linkValidationMessage={linkValidationMessage}
+        linkSubmitting={linkSubmitting}
+        onStartLink={handleStartLink}
+        onCancelLink={handleCancelLink}
+        onToggleQuestion={handleToggleQuestion}
+        onSaveQuestionLinks={handleSaveQuestionLinks}
+      />
     </section>
   )
 }

@@ -23,6 +23,7 @@ type Exam = {
   id: string;
   title: string;
   answerMode: AnswerMode;
+  questionIds: string[];
 };
 
 const questions: Question[] = [
@@ -53,11 +54,13 @@ const exams: Exam[] = [
     id: 'exam-1',
     title: 'Example Exam',
     answerMode: 'letters',
+    questionIds: ['q1'],
   },
   {
     id: 'exam-2',
     title: 'Binary Practice Exam',
     answerMode: 'powersOfTwo',
+    questionIds: ['q2'],
   },
 ];
 
@@ -94,10 +97,52 @@ app.post('/exams', (req, res) => {
     id: `exam-${Date.now()}`,
     title: title.trim(),
     answerMode,
+    questionIds: [],
   };
 
   exams.push(exam);
   res.status(201).json(exam);
+});
+
+app.put('/exams/:id', (req, res) => {
+  const { id } = req.params;
+  const { questionIds } = req.body as {
+    questionIds?: unknown;
+  };
+
+  const hasValidQuestionIds =
+    Array.isArray(questionIds) &&
+    questionIds.length > 0 &&
+    questionIds.every((questionId) => typeof questionId === 'string');
+
+  if (!hasValidQuestionIds) {
+    res.status(400).json({ message: 'At least one valid question id is required.' });
+    return;
+  }
+
+  const allQuestionsExist = questionIds.every((questionId) =>
+    questions.some((question) => question.id === questionId),
+  );
+
+  if (!allQuestionsExist) {
+    res.status(400).json({ message: 'Question selection contains unknown ids.' });
+    return;
+  }
+
+  const targetIndex = exams.findIndex((exam) => exam.id === id);
+
+  if (targetIndex === -1) {
+    res.status(404).json({ message: 'Unable to update exam' });
+    return;
+  }
+
+  const updatedExam: Exam = {
+    ...exams[targetIndex],
+    questionIds,
+  };
+
+  exams[targetIndex] = updatedExam;
+  res.json(updatedExam);
 });
 
 app.post('/questions', (req, res) => {
