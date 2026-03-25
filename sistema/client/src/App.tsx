@@ -1,16 +1,8 @@
 import { useEffect, useState } from 'react'
 import './App.css'
-
-type Alternative = {
-  text: string
-  isCorrect: boolean
-}
-
-type Question = {
-  id: string
-  statement: string
-  alternatives: Alternative[]
-}
+import { QuestionList } from './components/QuestionList'
+import { createQuestion, deleteQuestion, getQuestions, updateQuestion } from './services/questions'
+import type { Alternative, Question } from './types/question'
 
 function App() {
   const [questions, setQuestions] = useState<Question[]>([])
@@ -37,13 +29,7 @@ function App() {
       setLoading(true)
       setError(null)
 
-      const response = await fetch('http://localhost:3001/questions')
-
-      if (!response.ok) {
-        throw new Error('Request failed')
-      }
-
-      const data = (await response.json()) as Question[]
+      const data = await getQuestions()
       setQuestions(data)
     } catch {
       setError('Failed to load questions.')
@@ -87,22 +73,10 @@ function App() {
       setSubmitting(true)
       setValidationMessage(null)
 
-      const response = await fetch('http://localhost:3001/questions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          statement,
-          alternatives,
-        }),
+      const createdQuestion = await createQuestion({
+        statement,
+        alternatives,
       })
-
-      if (!response.ok) {
-        throw new Error('Request failed')
-      }
-
-      const createdQuestion = (await response.json()) as Question
       setQuestions((previous) => [...previous, createdQuestion])
       setStatement('')
       setAlternatives([
@@ -122,13 +96,7 @@ function App() {
     try {
       setRemoveErrorMessage(null)
 
-      const response = await fetch(`http://localhost:3001/questions/${id}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        throw new Error('Request failed')
-      }
+      await deleteQuestion(id)
 
       setQuestions((previous) => previous.filter((question) => question.id !== id))
     } catch {
@@ -181,22 +149,10 @@ function App() {
       setEditSubmitting(true)
       setEditValidationMessage(null)
 
-      const response = await fetch(`http://localhost:3001/questions/${questionId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          statement: editStatement,
-          alternatives: editAlternatives,
-        }),
+      const updatedQuestion = await updateQuestion(questionId, {
+        statement: editStatement,
+        alternatives: editAlternatives,
       })
-
-      if (!response.ok) {
-        throw new Error('Request failed')
-      }
-
-      const updatedQuestion = (await response.json()) as Question
       setQuestions((previous) =>
         previous.map((question) => (question.id === questionId ? updatedQuestion : question)),
       )
@@ -258,70 +214,21 @@ function App() {
         {validationMessage && <p>{validationMessage}</p>}
       </form>
 
-      <ul>
-        {questions.map((question) => (
-          <li key={question.id}>
-            {editingQuestionId === question.id ? (
-              <form onSubmit={(event) => void handleEditSubmit(event, question.id)}>
-                <h2>Edit Question</h2>
-
-                <label htmlFor={`edit-statement-${question.id}`}>Statement</label>
-                <input
-                  id={`edit-statement-${question.id}`}
-                  type="text"
-                  value={editStatement}
-                  onChange={(event) => setEditStatement(event.target.value)}
-                />
-
-                {editAlternatives.map((alternative, index) => (
-                  <div key={`edit-alternative-${question.id}-${index}`}>
-                    <label htmlFor={`edit-alternative-${question.id}-${index}`}>Alternative {index + 1}</label>
-                    <input
-                      id={`edit-alternative-${question.id}-${index}`}
-                      type="text"
-                      value={alternative.text}
-                      onChange={(event) => updateEditAlternativeText(index, event.target.value)}
-                    />
-
-                    <label htmlFor={`edit-alternative-correct-${question.id}-${index}`}>Correct</label>
-                    <input
-                      id={`edit-alternative-correct-${question.id}-${index}`}
-                      type="checkbox"
-                      checked={alternative.isCorrect}
-                      onChange={(event) => updateEditAlternativeCorrect(index, event.target.checked)}
-                    />
-                  </div>
-                ))}
-
-                <button type="submit" disabled={editSubmitting}>
-                  {editSubmitting ? 'Saving...' : 'Save'}
-                </button>
-                <button type="button" onClick={() => cancelEditQuestion()}>
-                  Cancel
-                </button>
-
-                {editValidationMessage && <p>{editValidationMessage}</p>}
-              </form>
-            ) : (
-              <>
-                <h2>{question.statement}</h2>
-                <button type="button" onClick={() => startEditQuestion(question)}>
-                  Edit
-                </button>
-                <button type="button" onClick={() => void handleRemoveQuestion(question.id)}>
-                  Remove
-                </button>
-
-                <ul>
-                  {question.alternatives.map((alternative, index) => (
-                    <li key={`${question.id}-${index}`}>{alternative.text}</li>
-                  ))}
-                </ul>
-              </>
-            )}
-          </li>
-        ))}
-      </ul>
+      <QuestionList
+        questions={questions}
+        editingQuestionId={editingQuestionId}
+        editStatement={editStatement}
+        editAlternatives={editAlternatives}
+        editValidationMessage={editValidationMessage}
+        editSubmitting={editSubmitting}
+        onStartEdit={startEditQuestion}
+        onCancelEdit={cancelEditQuestion}
+        onEditStatementChange={setEditStatement}
+        onEditAlternativeTextChange={updateEditAlternativeText}
+        onEditAlternativeCorrectChange={updateEditAlternativeCorrect}
+        onEditSubmit={(event, questionId) => void handleEditSubmit(event, questionId)}
+        onRemoveQuestion={(questionId) => void handleRemoveQuestion(questionId)}
+      />
 
       {removeErrorMessage && <p>{removeErrorMessage}</p>}
     </main>
