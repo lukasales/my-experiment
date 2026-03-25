@@ -17,6 +17,14 @@ type Question = {
   alternatives: Alternative[];
 };
 
+type AnswerMode = 'letters' | 'powersOfTwo';
+
+type Exam = {
+  id: string;
+  title: string;
+  answerMode: AnswerMode;
+};
+
 const questions: Question[] = [
   {
     id: 'q1',
@@ -40,12 +48,29 @@ const questions: Question[] = [
   },
 ];
 
+const exams: Exam[] = [
+  {
+    id: 'exam-1',
+    title: 'Example Exam',
+    answerMode: 'letters',
+  },
+  {
+    id: 'exam-2',
+    title: 'Binary Practice Exam',
+    answerMode: 'powersOfTwo',
+  },
+];
+
 app.get('/health', (_req, res) => {
   res.json({ ok: true });
 });
 
 app.get('/questions', (_req, res) => {
   res.json(questions);
+});
+
+app.get('/exams', (_req, res) => {
+  res.json(exams);
 });
 
 app.post('/questions', (req, res) => {

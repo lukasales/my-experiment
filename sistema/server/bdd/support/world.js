@@ -16,7 +16,21 @@ class QuestionsWorld {
       },
     ];
 
+    this.exams = [
+      {
+        id: 'exam-1',
+        title: 'Example Exam',
+        answerMode: 'letters',
+      },
+      {
+        id: 'exam-2',
+        title: 'Binary Practice Exam',
+        answerMode: 'powersOfTwo',
+      },
+    ];
+
     this.visibleQuestions = this.questions.map((q) => ({ ...q }));
+    this.lastResponse = null;
     this.pendingQuestionDraft = null;
     this.pendingEditedQuestion = null;
 

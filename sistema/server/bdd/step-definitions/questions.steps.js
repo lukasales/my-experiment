@@ -78,6 +78,15 @@ When('I request the list of questions', function () {
 	};
 });
 
+When('I request the list of exams', function () {
+	assert.equal(this.serverRunning, true);
+	this.requestLog.push('GET /exams');
+	this.lastResponse = {
+		status: 200,
+		body: this.exams.map((exam) => ({ ...exam })),
+	};
+});
+
 When('the response has not arrived yet', function () {
 	this.ui.loading = true;
 });
@@ -235,10 +244,30 @@ Then('the response body should be a JSON array of questions', function () {
 	assert.ok(Array.isArray(this.lastResponse.body));
 });
 
+Then('the response body should be a JSON array of exams', function () {
+	assert.ok(Array.isArray(this.lastResponse.body));
+});
+
 Then('each question should include a statement and alternatives', function () {
 	assert.ok(
 		this.lastResponse.body.every(
 			(question) => typeof question.statement === 'string' && Array.isArray(question.alternatives)
+		)
+	);
+});
+
+Then('each exam should include an id', function () {
+	assert.ok(this.lastResponse.body.every((exam) => typeof exam.id === 'string' && exam.id.length > 0));
+});
+
+Then('each exam should include a title', function () {
+	assert.ok(this.lastResponse.body.every((exam) => typeof exam.title === 'string' && exam.title.length > 0));
+});
+
+Then('each exam should include an answer mode', function () {
+	assert.ok(
+		this.lastResponse.body.every(
+			(exam) => exam.answerMode === 'letters' || exam.answerMode === 'powersOfTwo'
 		)
 	);
 });
