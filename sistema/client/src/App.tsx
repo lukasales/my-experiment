@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import './App.css'
+import { ExamSection } from './components/ExamSection'
 import { QuestionList } from './components/QuestionList'
 import { createQuestion, deleteQuestion, getQuestions, updateQuestion } from './services/questions'
 import type { Alternative, Question } from './types/question'
@@ -164,73 +165,75 @@ function App() {
     }
   }
 
-  if (loading) {
-    return <p>Loading...</p>
-  }
-
-  if (error) {
-    return <p>{error}</p>
-  }
-
   return (
     <main>
+      <ExamSection />
+
       <h1>Closed Questions</h1>
 
-      <form onSubmit={handleSubmit}>
-        <h2>Create Question</h2>
+      {loading ? (
+        <p>Loading...</p>
+      ) : error ? (
+        <p>{error}</p>
+      ) : (
+        <>
+          <form onSubmit={handleSubmit}>
+            <h2>Create Question</h2>
 
-        <label htmlFor="statement">Statement</label>
-        <input
-          id="statement"
-          type="text"
-          value={statement}
-          onChange={(event) => setStatement(event.target.value)}
-        />
-
-        {alternatives.map((alternative, index) => (
-          <div key={`new-alternative-${index}`}>
-            <label htmlFor={`alternative-${index}`}>Alternative {index + 1}</label>
+            <label htmlFor="statement">Statement</label>
             <input
-              id={`alternative-${index}`}
+              id="statement"
               type="text"
-              value={alternative.text}
-              onChange={(event) => updateAlternativeText(index, event.target.value)}
+              value={statement}
+              onChange={(event) => setStatement(event.target.value)}
             />
 
-            <label htmlFor={`alternative-correct-${index}`}>Correct</label>
-            <input
-              id={`alternative-correct-${index}`}
-              type="checkbox"
-              checked={alternative.isCorrect}
-              onChange={(event) => updateAlternativeCorrect(index, event.target.checked)}
-            />
-          </div>
-        ))}
+            {alternatives.map((alternative, index) => (
+              <div key={`new-alternative-${index}`}>
+                <label htmlFor={`alternative-${index}`}>Alternative {index + 1}</label>
+                <input
+                  id={`alternative-${index}`}
+                  type="text"
+                  value={alternative.text}
+                  onChange={(event) => updateAlternativeText(index, event.target.value)}
+                />
 
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Creating...' : 'Create Question'}
-        </button>
+                <label htmlFor={`alternative-correct-${index}`}>Correct</label>
+                <input
+                  id={`alternative-correct-${index}`}
+                  type="checkbox"
+                  checked={alternative.isCorrect}
+                  onChange={(event) => updateAlternativeCorrect(index, event.target.checked)}
+                />
+              </div>
+            ))}
 
-        {validationMessage && <p>{validationMessage}</p>}
-      </form>
+            <button type="submit" disabled={submitting}>
+              {submitting ? 'Creating...' : 'Create Question'}
+            </button>
 
-      <QuestionList
-        questions={questions}
-        editingQuestionId={editingQuestionId}
-        editStatement={editStatement}
-        editAlternatives={editAlternatives}
-        editValidationMessage={editValidationMessage}
-        editSubmitting={editSubmitting}
-        onStartEdit={startEditQuestion}
-        onCancelEdit={cancelEditQuestion}
-        onEditStatementChange={setEditStatement}
-        onEditAlternativeTextChange={updateEditAlternativeText}
-        onEditAlternativeCorrectChange={updateEditAlternativeCorrect}
-        onEditSubmit={(event, questionId) => void handleEditSubmit(event, questionId)}
-        onRemoveQuestion={(questionId) => void handleRemoveQuestion(questionId)}
-      />
+            {validationMessage && <p>{validationMessage}</p>}
+          </form>
 
-      {removeErrorMessage && <p>{removeErrorMessage}</p>}
+          <QuestionList
+            questions={questions}
+            editingQuestionId={editingQuestionId}
+            editStatement={editStatement}
+            editAlternatives={editAlternatives}
+            editValidationMessage={editValidationMessage}
+            editSubmitting={editSubmitting}
+            onStartEdit={startEditQuestion}
+            onCancelEdit={cancelEditQuestion}
+            onEditStatementChange={setEditStatement}
+            onEditAlternativeTextChange={updateEditAlternativeText}
+            onEditAlternativeCorrectChange={updateEditAlternativeCorrect}
+            onEditSubmit={(event, questionId) => void handleEditSubmit(event, questionId)}
+            onRemoveQuestion={(questionId) => void handleRemoveQuestion(questionId)}
+          />
+
+          {removeErrorMessage && <p>{removeErrorMessage}</p>}
+        </>
+      )}
     </main>
   )
 }
