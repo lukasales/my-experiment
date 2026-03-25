@@ -26,6 +26,11 @@ function App() {
   const [validationMessage, setValidationMessage] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [removeErrorMessage, setRemoveErrorMessage] = useState<string | null>(null)
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null)
+  const [editStatement, setEditStatement] = useState('')
+  const [editAlternatives, setEditAlternatives] = useState<Alternative[]>([])
+  const [editValidationMessage, setEditValidationMessage] = useState<string | null>(null)
+  const [editSubmitting, setEditSubmitting] = useState(false)
 
   const fetchQuestions = async () => {
     try {
@@ -131,6 +136,78 @@ function App() {
     }
   }
 
+  const startEditQuestion = (question: Question) => {
+    setEditingQuestionId(question.id)
+    setEditStatement(question.statement)
+    setEditAlternatives([...question.alternatives])
+    setEditValidationMessage(null)
+  }
+
+  const cancelEditQuestion = () => {
+    setEditingQuestionId(null)
+    setEditStatement('')
+    setEditAlternatives([])
+    setEditValidationMessage(null)
+  }
+
+  const updateEditAlternativeText = (index: number, text: string) => {
+    setEditAlternatives((previous) =>
+      previous.map((alternative, currentIndex) =>
+        currentIndex === index ? { ...alternative, text } : alternative,
+      ),
+    )
+  }
+
+  const updateEditAlternativeCorrect = (index: number, isCorrect: boolean) => {
+    setEditAlternatives((previous) =>
+      previous.map((alternative, currentIndex) =>
+        currentIndex === index ? { ...alternative, isCorrect } : alternative,
+      ),
+    )
+  }
+
+  const handleEditSubmit = async (event: React.FormEvent<HTMLFormElement>, questionId: string) => {
+    event.preventDefault()
+
+    const missingRequiredData =
+      editStatement.trim().length === 0 || editAlternatives.some((alternative) => alternative.text.trim().length === 0)
+
+    if (missingRequiredData) {
+      setEditValidationMessage('Please fill in the statement and all four alternatives.')
+      return
+    }
+
+    try {
+      setEditSubmitting(true)
+      setEditValidationMessage(null)
+
+      const response = await fetch(`http://localhost:3001/questions/${questionId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          statement: editStatement,
+          alternatives: editAlternatives,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Request failed')
+      }
+
+      const updatedQuestion = (await response.json()) as Question
+      setQuestions((previous) =>
+        previous.map((question) => (question.id === questionId ? updatedQuestion : question)),
+      )
+      cancelEditQuestion()
+    } catch {
+      setEditValidationMessage('Could not update question. Please try again.')
+    } finally {
+      setEditSubmitting(false)
+    }
+  }
+
   if (loading) {
     return <p>Loading...</p>
   }
@@ -184,16 +261,64 @@ function App() {
       <ul>
         {questions.map((question) => (
           <li key={question.id}>
-            <h2>{question.statement}</h2>
-            <button type="button" onClick={() => void handleRemoveQuestion(question.id)}>
-              Remove
-            </button>
+            {editingQuestionId === question.id ? (
+              <form onSubmit={(event) => void handleEditSubmit(event, question.id)}>
+                <h2>Edit Question</h2>
 
-            <ul>
-              {question.alternatives.map((alternative, index) => (
-                <li key={`${question.id}-${index}`}>{alternative.text}</li>
-              ))}
-            </ul>
+                <label htmlFor={`edit-statement-${question.id}`}>Statement</label>
+                <input
+                  id={`edit-statement-${question.id}`}
+                  type="text"
+                  value={editStatement}
+                  onChange={(event) => setEditStatement(event.target.value)}
+                />
+
+                {editAlternatives.map((alternative, index) => (
+                  <div key={`edit-alternative-${question.id}-${index}`}>
+                    <label htmlFor={`edit-alternative-${question.id}-${index}`}>Alternative {index + 1}</label>
+                    <input
+                      id={`edit-alternative-${question.id}-${index}`}
+                      type="text"
+                      value={alternative.text}
+                      onChange={(event) => updateEditAlternativeText(index, event.target.value)}
+                    />
+
+                    <label htmlFor={`edit-alternative-correct-${question.id}-${index}`}>Correct</label>
+                    <input
+                      id={`edit-alternative-correct-${question.id}-${index}`}
+                      type="checkbox"
+                      checked={alternative.isCorrect}
+                      onChange={(event) => updateEditAlternativeCorrect(index, event.target.checked)}
+                    />
+                  </div>
+                ))}
+
+                <button type="submit" disabled={editSubmitting}>
+                  {editSubmitting ? 'Saving...' : 'Save'}
+                </button>
+                <button type="button" onClick={() => cancelEditQuestion()}>
+                  Cancel
+                </button>
+
+                {editValidationMessage && <p>{editValidationMessage}</p>}
+              </form>
+            ) : (
+              <>
+                <h2>{question.statement}</h2>
+                <button type="button" onClick={() => startEditQuestion(question)}>
+                  Edit
+                </button>
+                <button type="button" onClick={() => void handleRemoveQuestion(question.id)}>
+                  Remove
+                </button>
+
+                <ul>
+                  {question.alternatives.map((alternative, index) => (
+                    <li key={`${question.id}-${index}`}>{alternative.text}</li>
+                  ))}
+                </ul>
+              </>
+            )}
           </li>
         ))}
       </ul>

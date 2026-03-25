@@ -89,6 +89,55 @@ app.post('/questions', (req, res) => {
   res.status(201).json(question);
 });
 
+app.put('/questions/:id', (req, res) => {
+  const { id } = req.params;
+  const { statement, alternatives } = req.body as {
+    statement?: unknown;
+    alternatives?: unknown;
+  };
+
+  const hasValidStatement =
+    typeof statement === 'string' && statement.trim().length > 0;
+
+  const hasValidAlternatives =
+    Array.isArray(alternatives) &&
+    alternatives.length === 4 &&
+    alternatives.every(
+      (alternative) =>
+        typeof alternative === 'object' &&
+        alternative !== null &&
+        typeof (alternative as { text?: unknown }).text === 'string' &&
+        (alternative as { text: string }).text.trim().length > 0 &&
+        typeof (alternative as { isCorrect?: unknown }).isCorrect === 'boolean',
+    );
+
+  if (!hasValidStatement || !hasValidAlternatives) {
+    res.status(400).json({
+      message: 'Statement and 4 alternatives with text and correctness are required.',
+    });
+    return;
+  }
+
+  const targetIndex = questions.findIndex((question) => question.id === id);
+
+  if (targetIndex === -1) {
+    res.status(404).json({ message: 'Unable to update question' });
+    return;
+  }
+
+  const updatedQuestion: Question = {
+    id,
+    statement: statement.trim(),
+    alternatives: alternatives.map((alternative) => ({
+      text: (alternative as { text: string }).text.trim(),
+      isCorrect: (alternative as { isCorrect: boolean }).isCorrect,
+    })),
+  };
+
+  questions[targetIndex] = updatedQuestion;
+  res.json(updatedQuestion);
+});
+
 app.delete('/questions/:id', (req, res) => {
   const { id } = req.params;
   const targetIndex = questions.findIndex((question) => question.id === id);
