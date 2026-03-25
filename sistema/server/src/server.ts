@@ -73,6 +73,33 @@ app.get('/exams', (_req, res) => {
   res.json(exams);
 });
 
+app.post('/exams', (req, res) => {
+  const { title, answerMode } = req.body as {
+    title?: unknown;
+    answerMode?: unknown;
+  };
+
+  const hasValidTitle = typeof title === 'string' && title.trim().length > 0;
+  const hasValidAnswerMode =
+    answerMode === 'letters' || answerMode === 'powersOfTwo';
+
+  if (!hasValidTitle || !hasValidAnswerMode) {
+    res.status(400).json({
+      message: 'Title and a valid answer mode are required.',
+    });
+    return;
+  }
+
+  const exam: Exam = {
+    id: `exam-${Date.now()}`,
+    title: title.trim(),
+    answerMode,
+  };
+
+  exams.push(exam);
+  res.status(201).json(exam);
+});
+
 app.post('/questions', (req, res) => {
   const { statement, alternatives } = req.body as {
     statement?: unknown;

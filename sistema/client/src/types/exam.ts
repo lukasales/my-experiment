@@ -5,3 +5,8 @@ export type Exam = {
   title: string
   answerMode: AnswerMode
 }
+
+export type CreateExamPayload = {
+  title: string
+  answerMode: AnswerMode
+}

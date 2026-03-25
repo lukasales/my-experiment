@@ -35,3 +35,30 @@ This repository contains a university assignment project.
 - Changes should compile or build successfully.
 - The implementation should satisfy the requested acceptance criteria.
 - If requirements are ambiguous, choose the smallest safe interpretation and say so.
+
+## Modularity expectations
+- Do not concentrate new domain types, validation logic, API access logic, route handling, and UI rendering in a single file when a small extraction is clearly justified.
+- Prefer small, maintainable extractions over growing large all-in-one files.
+- Do not introduce heavy architecture, but do extract obvious responsibilities when it improves maintainability and future growth.
+
+## Frontend structure preference
+- Prefer:
+  - `src/types` for domain models
+  - `src/services` for API calls
+  - `src/components` for rendering concerns
+- Keep `App.tsx` focused on composition and top-level orchestration whenever practical.
+- If a feature grows, prefer extracting the feature section into its own component instead of growing `App.tsx` indefinitely.
+
+## Backend structure preference
+- Prefer keeping `server.ts` focused on application bootstrap and route wiring whenever practical.
+- Prefer small extractions such as:
+  - route handlers or route modules for endpoint logic
+  - `types` or domain model files for shared backend shapes
+  - small helper/service modules for in-memory data operations or validation when the logic starts growing
+- Do not keep request validation, in-memory data manipulation, and route definitions all mixed in one large file if a small extraction is clearly justified.
+- Avoid introducing heavy frameworks or unnecessary layering, but do extract obvious backend responsibilities when it keeps the code easier to extend.
+
+## Scope discipline
+- If the task is a minimal slice, keep the implementation minimal.
+- However, minimal does not mean forcing all new logic into one existing file.
+- When a small extraction clearly improves clarity without expanding scope, prefer the small extraction.
