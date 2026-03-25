@@ -8,7 +8,8 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "bdd:questions": "cucumber-js ../features/question-*.feature --require ./bdd/step-definitions/**/*.js --require ./bdd/support/**/*.js"
   },
   "keywords": [],
   "author": "",
@@ -18,6 +19,7 @@
     "express": "^5.2.1"
   },
   "devDependencies": {
+    "@cucumber/cucumber": "^12.7.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^25.5.0",

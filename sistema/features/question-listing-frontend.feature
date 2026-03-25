@@ -1,9 +1,9 @@
-Feature: Frontend closed question listing
+Feature: Closed question listing
 
   Scenario: Display closed questions loaded from backend
-    Given the frontend is open
+    Given the question list screen is open
     And the backend returns success for GET /questions
-    When the questions screen loads
+    When the question list screen loads
     Then the frontend should fetch GET /questions
     And it should display a list of questions
     And each question should show its statement
@@ -16,5 +16,5 @@ Feature: Frontend closed question listing
 
   Scenario: Display error when fetch fails
     Given GET /questions fails
-    When the questions screen loads
+    When the question list screen loads
     Then the UI should show a simple error message
