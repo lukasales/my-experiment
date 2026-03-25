@@ -16,30 +16,101 @@ function App() {
   const [questions, setQuestions] = useState<Question[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [statement, setStatement] = useState('')
+  const [alternatives, setAlternatives] = useState<Alternative[]>([
+    { text: '', isCorrect: false },
+    { text: '', isCorrect: false },
+    { text: '', isCorrect: false },
+    { text: '', isCorrect: false },
+  ])
+  const [validationMessage, setValidationMessage] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+
+  const fetchQuestions = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const response = await fetch('http://localhost:3001/questions')
+
+      if (!response.ok) {
+        throw new Error('Request failed')
+      }
+
+      const data = (await response.json()) as Question[]
+      setQuestions(data)
+    } catch {
+      setError('Failed to load questions.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchQuestions = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-
-        const response = await fetch('http://localhost:3001/questions')
-
-        if (!response.ok) {
-          throw new Error('Request failed')
-        }
-
-        const data = (await response.json()) as Question[]
-        setQuestions(data)
-      } catch {
-        setError('Failed to load questions.')
-      } finally {
-        setLoading(false)
-      }
-    }
-
     void fetchQuestions()
   }, [])
+
+  const updateAlternativeText = (index: number, text: string) => {
+    setAlternatives((previous) =>
+      previous.map((alternative, currentIndex) =>
+        currentIndex === index ? { ...alternative, text } : alternative,
+      ),
+    )
+  }
+
+  const updateAlternativeCorrect = (index: number, isCorrect: boolean) => {
+    setAlternatives((previous) =>
+      previous.map((alternative, currentIndex) =>
+        currentIndex === index ? { ...alternative, isCorrect } : alternative,
+      ),
+    )
+  }
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    const missingRequiredData =
+      statement.trim().length === 0 || alternatives.some((alternative) => alternative.text.trim().length === 0)
+
+    if (missingRequiredData) {
+      setValidationMessage('Please fill in the statement and all four alternatives.')
+      return
+    }
+
+    try {
+      setSubmitting(true)
+      setValidationMessage(null)
+
+      const response = await fetch('http://localhost:3001/questions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          statement,
+          alternatives,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Request failed')
+      }
+
+      const createdQuestion = (await response.json()) as Question
+      setQuestions((previous) => [...previous, createdQuestion])
+      setStatement('')
+      setAlternatives([
+        { text: '', isCorrect: false },
+        { text: '', isCorrect: false },
+        { text: '', isCorrect: false },
+        { text: '', isCorrect: false },
+      ])
+    } catch {
+      setValidationMessage('Could not create question. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   if (loading) {
     return <p>Loading...</p>
@@ -52,6 +123,44 @@ function App() {
   return (
     <main>
       <h1>Closed Questions</h1>
+
+      <form onSubmit={handleSubmit}>
+        <h2>Create Question</h2>
+
+        <label htmlFor="statement">Statement</label>
+        <input
+          id="statement"
+          type="text"
+          value={statement}
+          onChange={(event) => setStatement(event.target.value)}
+        />
+
+        {alternatives.map((alternative, index) => (
+          <div key={`new-alternative-${index}`}>
+            <label htmlFor={`alternative-${index}`}>Alternative {index + 1}</label>
+            <input
+              id={`alternative-${index}`}
+              type="text"
+              value={alternative.text}
+              onChange={(event) => updateAlternativeText(index, event.target.value)}
+            />
+
+            <label htmlFor={`alternative-correct-${index}`}>Correct</label>
+            <input
+              id={`alternative-correct-${index}`}
+              type="checkbox"
+              checked={alternative.isCorrect}
+              onChange={(event) => updateAlternativeCorrect(index, event.target.checked)}
+            />
+          </div>
+        ))}
+
+        <button type="submit" disabled={submitting}>
+          {submitting ? 'Creating...' : 'Create Question'}
+        </button>
+
+        {validationMessage && <p>{validationMessage}</p>}
+      </form>
 
       <ul>
         {questions.map((question) => (
