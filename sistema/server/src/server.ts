@@ -1,7 +1,14 @@
 import express from 'express';
 import cors from 'cors';
+import AdmZip from 'adm-zip';
+import {
+  generateRandomizedExamVariant,
+  type GeneratedExamVariant,
+} from './services/examGeneration';
+import { buildAnswerKeyCsv } from './services/answerKeyCsv';
+import { buildSingleExamPdf } from './services/examPdf';
 
-const app = express();
+export const app = express();
 
 app.use(cors());
 app.use(express.json());
@@ -24,6 +31,14 @@ type Exam = {
   title: string;
   answerMode: AnswerMode;
   questionIds: string[];
+};
+
+type GeneratedBatchRecord = {
+  answerMode: AnswerMode;
+  generatedVariants: Array<{
+    examNumber: number;
+    variant: GeneratedExamVariant;
+  }>;
 };
 
 const questions: Question[] = [
@@ -64,6 +79,8 @@ const exams: Exam[] = [
   },
 ];
 
+const lastGeneratedBatchByExamId = new Map<string, GeneratedBatchRecord>();
+
 app.get('/health', (_req, res) => {
   res.json({ ok: true });
 });
@@ -74,6 +91,145 @@ app.get('/questions', (_req, res) => {
 
 app.get('/exams', (_req, res) => {
   res.json(exams);
+});
+
+app.get('/exams/:id/pdf', async (req, res) => {
+  const { id } = req.params;
+  const exam = exams.find((currentExam) => currentExam.id === id);
+
+  if (!exam) {
+    res.status(404).json({ message: 'Exam not found.' });
+    return;
+  }
+
+  const examQuestions = exam.questionIds
+    .map((questionId) => questions.find((question) => question.id === questionId))
+    .filter((question): question is Question => Boolean(question));
+
+  const generatedVariant = generateRandomizedExamVariant(
+    examQuestions.map((question) => ({
+      id: question.id,
+      statement: question.statement,
+      alternatives: question.alternatives.map((alternative) => ({
+        text: alternative.text,
+        isCorrect: alternative.isCorrect,
+      })),
+    })),
+  );
+
+  const pdfBytes = await buildSingleExamPdf({
+    examId: exam.id,
+    examTitle: exam.title,
+    answerMode: exam.answerMode,
+    examNumber: 1,
+    questions: generatedVariant.questions.map((question) => ({
+      statement: question.statement,
+      alternatives: question.alternatives.map((alternative) => alternative.text),
+    })),
+  });
+
+  const safeFileName = exam.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${safeFileName || id}.pdf"`);
+  res.send(Buffer.from(pdfBytes));
+});
+
+app.get('/exams/:id/pdf/batch', async (req, res) => {
+  const { id } = req.params;
+  const count = Number(req.query.count);
+  const exam = exams.find((currentExam) => currentExam.id === id);
+
+  if (!exam) {
+    res.status(404).json({ message: 'Exam not found.' });
+    return;
+  }
+
+  const hasValidCount = Number.isInteger(count) && count > 0;
+
+  if (!hasValidCount) {
+    res.status(400).json({ message: 'A positive integer count is required.' });
+    return;
+  }
+
+  const examQuestions = exam.questionIds
+    .map((questionId) => questions.find((question) => question.id === questionId))
+    .filter((question): question is Question => Boolean(question));
+
+  const safeFileName = exam.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() || id;
+  const zip = new AdmZip();
+  const generatedVariants: GeneratedBatchRecord['generatedVariants'] = [];
+
+  for (let examNumber = 1; examNumber <= count; examNumber += 1) {
+    const generatedVariant = generateRandomizedExamVariant(
+      examQuestions.map((question) => ({
+        id: question.id,
+        statement: question.statement,
+        alternatives: question.alternatives.map((alternative) => ({
+          text: alternative.text,
+          isCorrect: alternative.isCorrect,
+        })),
+      })),
+    );
+
+    const pdfBytes = await buildSingleExamPdf({
+      examId: exam.id,
+      examTitle: exam.title,
+      answerMode: exam.answerMode,
+      examNumber,
+      questions: generatedVariant.questions.map((question) => ({
+        statement: question.statement,
+        alternatives: question.alternatives.map((alternative) => alternative.text),
+      })),
+    });
+
+    zip.addFile(`exam-${examNumber}.pdf`, Buffer.from(pdfBytes));
+    generatedVariants.push({ examNumber, variant: generatedVariant });
+  }
+
+  lastGeneratedBatchByExamId.set(exam.id, {
+    answerMode: exam.answerMode,
+    generatedVariants,
+  });
+
+  const zipBuffer = zip.toBuffer();
+
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', `attachment; filename="${safeFileName}_batch.zip"`);
+  res.send(zipBuffer);
+});
+
+app.get('/exams/:id/pdf/batch/answer-key.csv', (req, res) => {
+  const { id } = req.params;
+  const exam = exams.find((currentExam) => currentExam.id === id);
+
+  if (!exam) {
+    res.status(404).json({ message: 'Exam not found.' });
+    return;
+  }
+
+  const generationRecord = lastGeneratedBatchByExamId.get(exam.id);
+
+  if (!generationRecord || generationRecord.generatedVariants.length === 0) {
+    res.status(404).json({
+      message: 'Generate a batch first to export the answer key CSV.',
+    });
+    return;
+  }
+
+  const csv = buildAnswerKeyCsv({
+    answerMode: generationRecord.answerMode,
+    generatedVariants: generationRecord.generatedVariants,
+  });
+
+  const safeFileName = exam.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() || id;
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="${safeFileName}_answer_key.csv"`,
+  );
+  res.send(Buffer.from(csv, 'utf-8'));
 });
 
 app.post('/exams', (req, res) => {
@@ -272,6 +428,8 @@ app.delete('/questions/:id', (req, res) => {
 
 const PORT = 3001;
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}

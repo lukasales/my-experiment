@@ -10,20 +10,25 @@
     "start": "node dist/server.js",
     "check": "tsc --noEmit",
     "bdd:questions": "cucumber-js ../features/question-*.feature --require ./bdd/step-definitions/**/*.js --require ./bdd/support/**/*.js",
-    "bdd:exams": "cucumber-js ../features/exam-management.feature ../features/exam-question-linking.feature ../features/exam-editing.feature ../features/exam-removal.feature --require ./bdd/step-definitions/**/*.js --require ./bdd/support/**/*.js"
+    "bdd:exams": "cucumber-js ../features/exam-management.feature ../features/exam-question-linking.feature ../features/exam-editing.feature ../features/exam-removal.feature --require ./bdd/step-definitions/**/*.js --require ./bdd/support/**/*.js",
+    "bdd:generation": "npm run build && cucumber-js ../features/exam-pdf-single.feature ../features/exam-pdf-layout.feature ../features/exam-pdf-batch.feature ../features/exam-randomization.feature ../features/exam-answer-key-csv.feature --require ./bdd/step-definitions/**/*.js --require ./bdd/support/**/*.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/adm-zip": "^0.5.8",
+    "adm-zip": "^0.5.16",
     "cors": "^2.8.6",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "pdf-lib": "^1.17.1"
   },
   "devDependencies": {
     "@cucumber/cucumber": "^12.7.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^25.5.0",
+    "supertest": "^7.2.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3"
   }
