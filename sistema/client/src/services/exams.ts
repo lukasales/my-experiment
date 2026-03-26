@@ -43,3 +43,13 @@ export const updateExam = async (id: string, payload: UpdateExamPayload): Promis
 
   return (await response.json()) as Exam
 }
+
+export const deleteExam = async (id: string): Promise<void> => {
+  const response = await fetch(`${EXAMS_API_URL}/${id}`, {
+    method: 'DELETE',
+  })
+
+  if (!response.ok) {
+    throw new Error('Request failed')
+  }
+}

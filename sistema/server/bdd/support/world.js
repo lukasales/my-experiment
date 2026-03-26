@@ -21,29 +21,36 @@ class QuestionsWorld {
         id: 'exam-1',
         title: 'Example Exam',
         answerMode: 'letters',
+        questionIds: [1],
       },
       {
         id: 'exam-2',
         title: 'Binary Practice Exam',
         answerMode: 'powersOfTwo',
+        questionIds: [],
       },
     ];
 
     this.visibleQuestions = this.questions.map((q) => ({ ...q }));
+    this.visibleExams = this.exams.map((exam) => ({ ...exam }));
     this.lastResponse = null;
     this.pendingQuestionDraft = null;
     this.pendingEditedQuestion = null;
+    this.pendingEditedExam = null;
 
     this.lastOperation = null;
     this.lastCreatedQuestionId = null;
     this.lastRemovedQuestionId = null;
     this.lastUpdatedQuestionId = null;
+    this.lastUpdatedExamId = null;
+    this.lastRemovedExamId = null;
 
     this.requestLog = [];
 
     this.backend = {
       getQuestionsOutcome: 'success',
       removeQuestionOutcome: 'success',
+      removeExamOutcome: 'success',
     };
 
     this.ui = {
@@ -51,6 +58,8 @@ class QuestionsWorld {
       questionListVisible: false,
       questionCreationFormVisible: false,
       questionEditFormVisible: false,
+      examListVisible: false,
+      examEditFormVisible: false,
       loading: false,
       errorMessage: '',
       validationMessage: '',

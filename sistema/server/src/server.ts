@@ -106,17 +106,24 @@ app.post('/exams', (req, res) => {
 
 app.put('/exams/:id', (req, res) => {
   const { id } = req.params;
-  const { questionIds } = req.body as {
+  const { title, answerMode, questionIds } = req.body as {
+    title?: unknown;
+    answerMode?: unknown;
     questionIds?: unknown;
   };
 
+  const hasValidTitle = typeof title === 'string' && title.trim().length > 0;
+  const hasValidAnswerMode =
+    answerMode === 'letters' || answerMode === 'powersOfTwo';
+
   const hasValidQuestionIds =
     Array.isArray(questionIds) &&
-    questionIds.length > 0 &&
     questionIds.every((questionId) => typeof questionId === 'string');
 
-  if (!hasValidQuestionIds) {
-    res.status(400).json({ message: 'At least one valid question id is required.' });
+  if (!hasValidTitle || !hasValidAnswerMode || !hasValidQuestionIds) {
+    res.status(400).json({
+      message: 'Title, answer mode, and valid question ids are required.',
+    });
     return;
   }
 
@@ -138,11 +145,26 @@ app.put('/exams/:id', (req, res) => {
 
   const updatedExam: Exam = {
     ...exams[targetIndex],
+    title: title.trim(),
+    answerMode,
     questionIds,
   };
 
   exams[targetIndex] = updatedExam;
   res.json(updatedExam);
+});
+
+app.delete('/exams/:id', (req, res) => {
+  const { id } = req.params;
+  const targetIndex = exams.findIndex((exam) => exam.id === id);
+
+  if (targetIndex === -1) {
+    res.status(404).json({ message: 'Unable to remove exam' });
+    return;
+  }
+
+  exams.splice(targetIndex, 1);
+  res.status(204).send();
 });
 
 app.post('/questions', (req, res) => {

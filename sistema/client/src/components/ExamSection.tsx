@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { createExam, getExams, updateExam } from '../services/exams'
+import { createExam, deleteExam, getExams, updateExam } from '../services/exams'
 import { getQuestions } from '../services/questions'
 import type { AnswerMode, Exam } from '../types/exam'
 import type { Question } from '../types/question'
@@ -15,9 +15,12 @@ export function ExamSection() {
   const [validationMessage, setValidationMessage] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [editingExamId, setEditingExamId] = useState<string | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editAnswerMode, setEditAnswerMode] = useState<AnswerMode>('letters')
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>([])
   const [linkValidationMessage, setLinkValidationMessage] = useState<string | null>(null)
   const [linkSubmitting, setLinkSubmitting] = useState(false)
+  const [removeErrorMessage, setRemoveErrorMessage] = useState<string | null>(null)
 
   const fetchExams = async () => {
     try {
@@ -33,20 +36,22 @@ export function ExamSection() {
     }
   }
 
+  const fetchQuestions = async (): Promise<Question[]> => {
+    try {
+      const data = await getQuestions()
+      setQuestions(data)
+      return data
+    } catch {
+      setQuestions([])
+      return []
+    }
+  }
+
   useEffect(() => {
     void fetchExams()
   }, [])
 
   useEffect(() => {
-    const fetchQuestions = async () => {
-      try {
-        const data = await getQuestions()
-        setQuestions(data)
-      } catch {
-        setQuestions([])
-      }
-    }
-
     void fetchQuestions()
   }, [])
 
@@ -77,14 +82,22 @@ export function ExamSection() {
     }
   }
 
-  const handleStartLink = (exam: Exam) => {
+  const handleStartLink = async (exam: Exam) => {
+    const latestQuestions = await fetchQuestions()
+    const existingQuestionIds = new Set(latestQuestions.map((question) => question.id))
+    const filteredQuestionIds = exam.questionIds.filter((questionId) => existingQuestionIds.has(questionId))
+
     setEditingExamId(exam.id)
-    setSelectedQuestionIds(exam.questionIds)
+    setEditTitle(exam.title)
+    setEditAnswerMode(exam.answerMode)
+    setSelectedQuestionIds(filteredQuestionIds)
     setLinkValidationMessage(null)
   }
 
   const handleCancelLink = () => {
     setEditingExamId(null)
+    setEditTitle('')
+    setEditAnswerMode('letters')
     setSelectedQuestionIds([])
     setLinkValidationMessage(null)
   }
@@ -100,8 +113,8 @@ export function ExamSection() {
   }
 
   const handleSaveQuestionLinks = async (examId: string) => {
-    if (selectedQuestionIds.length === 0) {
-      setLinkValidationMessage('Please select at least one question.')
+    if (editTitle.trim().length === 0) {
+      setLinkValidationMessage('Please fill in all required fields.')
       return
     }
 
@@ -110,6 +123,8 @@ export function ExamSection() {
       setLinkValidationMessage(null)
 
       const updatedExam = await updateExam(examId, {
+        title: editTitle,
+        answerMode: editAnswerMode,
         questionIds: selectedQuestionIds,
       })
 
@@ -119,6 +134,21 @@ export function ExamSection() {
       setLinkValidationMessage('Could not save question selection. Please try again.')
     } finally {
       setLinkSubmitting(false)
+    }
+  }
+
+  const handleRemoveExam = async (examId: string) => {
+    try {
+      setRemoveErrorMessage(null)
+      await deleteExam(examId)
+
+      setExams((previous) => previous.filter((exam) => exam.id !== examId))
+
+      if (editingExamId === examId) {
+        handleCancelLink()
+      }
+    } catch {
+      setRemoveErrorMessage('Unable to remove exam.')
     }
   }
 
@@ -158,14 +188,21 @@ export function ExamSection() {
         loading={loading}
         error={error}
         editingExamId={editingExamId}
+        editTitle={editTitle}
+        editAnswerMode={editAnswerMode}
         selectedQuestionIds={selectedQuestionIds}
         linkValidationMessage={linkValidationMessage}
         linkSubmitting={linkSubmitting}
         onStartLink={handleStartLink}
         onCancelLink={handleCancelLink}
+        onEditTitleChange={setEditTitle}
+        onEditAnswerModeChange={setEditAnswerMode}
         onToggleQuestion={handleToggleQuestion}
         onSaveQuestionLinks={handleSaveQuestionLinks}
+        onRemoveExam={handleRemoveExam}
       />
+
+      {removeErrorMessage && <p>{removeErrorMessage}</p>}
     </section>
   )
 }

@@ -9,7 +9,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "check": "tsc --noEmit",
-    "bdd:questions": "cucumber-js ../features/question-*.feature --require ./bdd/step-definitions/**/*.js --require ./bdd/support/**/*.js"
+    "bdd:questions": "cucumber-js ../features/question-*.feature --require ./bdd/step-definitions/**/*.js --require ./bdd/support/**/*.js",
+    "bdd:exams": "cucumber-js ../features/exam-management.feature ../features/exam-question-linking.feature ../features/exam-editing.feature ../features/exam-removal.feature --require ./bdd/step-definitions/**/*.js --require ./bdd/support/**/*.js"
   },
   "keywords": [],
   "author": "",

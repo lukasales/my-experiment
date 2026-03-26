@@ -1,5 +1,6 @@
 import type { Exam } from '../types/exam'
 import type { Question } from '../types/question'
+import type { AnswerMode } from '../types/exam'
 
 type ExamListProps = {
   exams: Exam[]
@@ -7,13 +8,18 @@ type ExamListProps = {
   loading: boolean
   error: string | null
   editingExamId: string | null
+  editTitle: string
+  editAnswerMode: AnswerMode
   selectedQuestionIds: string[]
   linkValidationMessage: string | null
   linkSubmitting: boolean
   onStartLink: (exam: Exam) => void
   onCancelLink: () => void
+  onEditTitleChange: (value: string) => void
+  onEditAnswerModeChange: (value: AnswerMode) => void
   onToggleQuestion: (questionId: string, checked: boolean) => void
   onSaveQuestionLinks: (examId: string) => void
+  onRemoveExam: (examId: string) => void
 }
 
 export function ExamList({
@@ -22,13 +28,18 @@ export function ExamList({
   loading,
   error,
   editingExamId,
+  editTitle,
+  editAnswerMode,
   selectedQuestionIds,
   linkValidationMessage,
   linkSubmitting,
   onStartLink,
   onCancelLink,
+  onEditTitleChange,
+  onEditAnswerModeChange,
   onToggleQuestion,
   onSaveQuestionLinks,
+  onRemoveExam,
 }: ExamListProps) {
   if (loading) {
     return <p>Loading exams...</p>
@@ -53,7 +64,27 @@ export function ExamList({
 
               {editingExamId === exam.id ? (
                 <>
-                  <h3>Link Questions</h3>
+                  <h3>Edit Exam</h3>
+
+                  <label htmlFor={`edit-exam-title-${exam.id}`}>Title</label>
+                  <input
+                    id={`edit-exam-title-${exam.id}`}
+                    type='text'
+                    value={editTitle}
+                    onChange={(event) => onEditTitleChange(event.target.value)}
+                  />
+
+                  <label htmlFor={`edit-exam-answer-mode-${exam.id}`}>Answer mode</label>
+                  <select
+                    id={`edit-exam-answer-mode-${exam.id}`}
+                    value={editAnswerMode}
+                    onChange={(event) => onEditAnswerModeChange(event.target.value as AnswerMode)}
+                  >
+                    <option value='letters'>letters</option>
+                    <option value='powersOfTwo'>powersOfTwo</option>
+                  </select>
+
+                  <h4>Link Questions</h4>
                   {questions.map((question) => (
                     <div key={`${exam.id}-${question.id}`}>
                       <label htmlFor={`exam-${exam.id}-question-${question.id}`}>{question.statement}</label>
@@ -76,9 +107,14 @@ export function ExamList({
                   {linkValidationMessage && <p>{linkValidationMessage}</p>}
                 </>
               ) : (
-                <button type='button' onClick={() => onStartLink(exam)}>
-                  Link Questions
-                </button>
+                <>
+                  <button type='button' onClick={() => onStartLink(exam)}>
+                    Edit
+                  </button>
+                  <button type='button' onClick={() => onRemoveExam(exam.id)}>
+                    Remove
+                  </button>
+                </>
               )}
             </li>
           ))}

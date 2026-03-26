@@ -13,5 +13,7 @@ export type CreateExamPayload = {
 }
 
 export type UpdateExamPayload = {
+  title: string
+  answerMode: AnswerMode
   questionIds: string[]
 }
