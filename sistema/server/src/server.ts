@@ -5,6 +5,22 @@ import {
   generateRandomizedExamVariant,
   type GeneratedExamVariant,
 } from './services/examGeneration';
+import {
+  parseAnswerKeyCsv,
+  type ParsedAnswerKey,
+} from './services/answerKeyImport';
+import {
+  parseStudentResponsesCsv,
+  type ParsedStudentResponses,
+} from './services/studentResponsesImport';
+import {
+  runStrictGrading,
+  type StrictGradingResult,
+} from './services/strictGrading';
+import {
+  runLenientGrading,
+  type LenientGradingResult,
+} from './services/lenientGrading';
 import { buildAnswerKeyCsv } from './services/answerKeyCsv';
 import { buildSingleExamPdf } from './services/examPdf';
 
@@ -80,6 +96,21 @@ const exams: Exam[] = [
 ];
 
 const lastGeneratedBatchByExamId = new Map<string, GeneratedBatchRecord>();
+let importedAnswerKey: ParsedAnswerKey | null = null;
+let importedStudentResponses: ParsedStudentResponses | null = null;
+let strictGradingResult: StrictGradingResult | null = null;
+let lenientGradingResult: LenientGradingResult | null = null;
+
+type FinalGradingReport = {
+  gradingMode: 'strict' | 'lenient';
+  generatedAt: string;
+  students: Array<{
+    studentId: string;
+    examNumber: number;
+    score: number;
+    totalQuestions: number;
+  }>;
+};
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });
@@ -230,6 +261,138 @@ app.get('/exams/:id/pdf/batch/answer-key.csv', (req, res) => {
     `attachment; filename="${safeFileName}_answer_key.csv"`,
   );
   res.send(Buffer.from(csv, 'utf-8'));
+});
+
+app.post('/grading/answer-key/import', (req, res) => {
+  const { csvContent } = req.body as {
+    csvContent?: unknown;
+  };
+
+  if (typeof csvContent !== 'string') {
+    res.status(400).json({ message: 'Invalid answer key CSV' });
+    return;
+  }
+
+  try {
+    const parsed = parseAnswerKeyCsv(csvContent);
+    importedAnswerKey = parsed;
+
+    res.status(201).json({
+      questionColumns: parsed.questionColumns,
+      importedExams: parsed.rows.length,
+      message: 'Answer key imported successfully.',
+    });
+  } catch {
+    res.status(400).json({ message: 'Invalid answer key CSV' });
+  }
+});
+
+app.post('/grading/student-responses/import', (req, res) => {
+  const { csvContent } = req.body as {
+    csvContent?: unknown;
+  };
+
+  if (typeof csvContent !== 'string') {
+    res.status(400).json({ message: 'Invalid student responses CSV' });
+    return;
+  }
+
+  try {
+    const parsed = parseStudentResponsesCsv(csvContent);
+    importedStudentResponses = parsed;
+
+    res.status(201).json({
+      questionColumns: parsed.questionColumns,
+      importedResponses: parsed.rows.length,
+      message: 'Student responses imported successfully.',
+    });
+  } catch {
+    res.status(400).json({ message: 'Invalid student responses CSV' });
+  }
+});
+
+app.post('/grading/run/strict', (_req, res) => {
+  if (!importedAnswerKey || !importedStudentResponses) {
+    res.status(400).json({
+      message: 'Load answer key and student responses before strict grading.',
+    });
+    return;
+  }
+
+  try {
+    const result = runStrictGrading(importedAnswerKey, importedStudentResponses);
+    strictGradingResult = result;
+
+    res.json({
+      gradingMode: result.gradingMode,
+      students: result.students,
+      message: 'Strict grading completed successfully.',
+    });
+  } catch (error) {
+    res.status(400).json({
+      message: error instanceof Error ? error.message : 'Unable to run strict grading.',
+    });
+  }
+});
+
+app.post('/grading/run/lenient', (_req, res) => {
+  if (!importedAnswerKey || !importedStudentResponses) {
+    res.status(400).json({
+      message: 'Load answer key and student responses before lenient grading.',
+    });
+    return;
+  }
+
+  try {
+    const result = runLenientGrading(importedAnswerKey, importedStudentResponses);
+    lenientGradingResult = result;
+
+    res.json({
+      gradingMode: result.gradingMode,
+      scoringRule: result.scoringRule,
+      students: result.students,
+      message: 'Lenient grading completed successfully.',
+    });
+  } catch (error) {
+    res.status(400).json({
+      message: error instanceof Error ? error.message : 'Unable to run lenient grading.',
+    });
+  }
+});
+
+app.get('/grading/report/final', (req, res) => {
+  const requestedMode = req.query.mode;
+  const mode =
+    requestedMode === 'strict' || requestedMode === 'lenient'
+      ? requestedMode
+      : undefined;
+
+  const selectedResult =
+    mode === 'strict'
+      ? strictGradingResult
+      : mode === 'lenient'
+        ? lenientGradingResult
+        : strictGradingResult ?? lenientGradingResult;
+
+  if (!selectedResult) {
+    res.status(400).json({
+      message: 'Run grading before generating the final report.',
+    });
+    return;
+  }
+
+  const report: FinalGradingReport = {
+    gradingMode: selectedResult.gradingMode,
+    generatedAt: new Date().toISOString(),
+    students: selectedResult.students.map((student) => ({
+      studentId: student.studentId,
+      examNumber: student.examNumber,
+      score: student.totalScore,
+      totalQuestions: student.totalQuestions,
+    })),
+  };
+
+  res.json(report);
 });
 
 app.post('/exams', (req, res) => {

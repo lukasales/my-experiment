@@ -5,7 +5,13 @@ import {
   downloadAnswerKeyCsv,
   downloadBatchExamZip,
   downloadSingleExamPdf,
+  getFinalGradingReport,
   getExams,
+  importAnswerKeyCsv,
+  importStudentResponsesCsv,
+  runStrictGrading,
+  runLenientGrading,
+  type FinalGradingReport,
   updateExam,
 } from '../services/exams'
 import { getQuestions } from '../services/questions'
@@ -31,6 +37,14 @@ export function ExamSection() {
   const [removeErrorMessage, setRemoveErrorMessage] = useState<string | null>(null)
   const [generationErrorMessage, setGenerationErrorMessage] = useState<string | null>(null)
   const [batchCountByExamId, setBatchCountByExamId] = useState<Record<string, string>>({})
+  const [reportMode, setReportMode] = useState<'strict' | 'lenient'>('strict')
+  const [finalReport, setFinalReport] = useState<FinalGradingReport | null>(null)
+  const [reportErrorMessage, setReportErrorMessage] = useState<string | null>(null)
+  const [answerKeyContent, setAnswerKeyContent] = useState<string>('')
+  const [studentResponsesContent, setStudentResponsesContent] = useState<string>('')
+  const [gradingMessage, setGradingMessage] = useState<string | null>(null)
+  const [gradingSubmitting, setGradingSubmitting] = useState(false)
+  const [gradingHasRun, setGradingHasRun] = useState(false)
 
   const fetchExams = async () => {
     try {
@@ -201,6 +215,75 @@ export function ExamSection() {
     }
   }
 
+  const handleImportAnswerKey = async () => {
+    if (answerKeyContent.trim().length === 0) {
+      setGradingMessage('Please provide answer-key CSV content.')
+      return
+    }
+
+    try {
+      setGradingSubmitting(true)
+      setGradingMessage(null)
+      await importAnswerKeyCsv(answerKeyContent)
+      setGradingMessage('Answer key imported successfully.')
+    } catch {
+      setGradingMessage('Unable to import answer key CSV.')
+    } finally {
+      setGradingSubmitting(false)
+    }
+  }
+
+  const handleImportStudentResponses = async () => {
+    if (studentResponsesContent.trim().length === 0) {
+      setGradingMessage('Please provide student responses CSV content.')
+      return
+    }
+
+    try {
+      setGradingSubmitting(true)
+      setGradingMessage(null)
+      await importStudentResponsesCsv(studentResponsesContent)
+      setGradingMessage('Student responses imported successfully.')
+    } catch {
+      setGradingMessage('Unable to import student responses CSV.')
+    } finally {
+      setGradingSubmitting(false)
+    }
+  }
+
+  const handleRunGrading = async (mode: 'strict' | 'lenient') => {
+    try {
+      setGradingSubmitting(true)
+      setGradingMessage(null)
+      if (mode === 'strict') {
+        await runStrictGrading()
+      } else {
+        await runLenientGrading()
+      }
+      setGradingHasRun(true)
+      setGradingMessage(`${mode.charAt(0).toUpperCase() + mode.slice(1)} grading completed successfully.`)
+    } catch {
+      setGradingMessage(`Unable to run ${mode} grading.`)
+    } finally {
+      setGradingSubmitting(false)
+    }
+  }
+
+  const handleGenerateFinalReport = async () => {
+    if (!gradingHasRun) {
+      setReportErrorMessage('Please run grading before generating the report.')
+      return
+    }
+
+    try {
+      setReportErrorMessage(null)
+      const report = await getFinalGradingReport(reportMode)
+      setFinalReport(report)
+    } catch {
+      setReportErrorMessage('Unable to generate final grading report. Run grading first.')
+    }
+  }
+
   return (
     <section>
       <form onSubmit={handleSubmit}>
@@ -258,6 +341,98 @@ export function ExamSection() {
 
       {removeErrorMessage && <p>{removeErrorMessage}</p>}
       {generationErrorMessage && <p>{generationErrorMessage}</p>}
+
+      <section>
+        <h2>Grading Workflow</h2>
+
+        <div>
+          <h3>Step 1: Import Answer Key</h3>
+          <label htmlFor='answer-key-content'>Answer Key CSV (paste content below)</label>
+          <textarea
+            id='answer-key-content'
+            value={answerKeyContent}
+            onChange={(event) => setAnswerKeyContent(event.target.value)}
+            rows={4}
+            placeholder='examNumber,q1,q2,q3,...'
+          />
+          <button
+            type='button'
+            onClick={handleImportAnswerKey}
+            disabled={gradingSubmitting}
+          >
+            {gradingSubmitting ? 'Importing...' : 'Import Answer Key'}
+          </button>
+        </div>
+
+        <div>
+          <h3>Step 2: Import Student Responses</h3>
+          <label htmlFor='student-responses-content'>Student Responses CSV (paste content below)</label>
+          <textarea
+            id='student-responses-content'
+            value={studentResponsesContent}
+            onChange={(event) => setStudentResponsesContent(event.target.value)}
+            rows={4}
+            placeholder='studentId,examNumber,q1,q2,q3,...'
+          />
+          <button
+            type='button'
+            onClick={handleImportStudentResponses}
+            disabled={gradingSubmitting}
+          >
+            {gradingSubmitting ? 'Importing...' : 'Import Student Responses'}
+          </button>
+        </div>
+
+        <div>
+          <h3>Step 3: Run Grading</h3>
+          <label htmlFor='grading-mode'>Grading mode</label>
+          <select
+            id='grading-mode'
+            value={reportMode}
+            onChange={(event) => setReportMode(event.target.value as 'strict' | 'lenient')}
+          >
+            <option value='strict'>Strict (all-or-nothing)</option>
+            <option value='lenient'>Lenient (proportional)</option>
+          </select>
+          <button
+            type='button'
+            onClick={() => handleRunGrading(reportMode)}
+            disabled={gradingSubmitting}
+          >
+            {gradingSubmitting ? 'Running...' : 'Run Grading'}
+          </button>
+        </div>
+
+        {gradingMessage && <p><strong>Grading:</strong> {gradingMessage}</p>}
+
+        <div>
+          <h3>Step 4: Generate Final Report</h3>
+          <button
+            type='button'
+            onClick={handleGenerateFinalReport}
+            disabled={!gradingHasRun}
+          >
+            Generate Final Report
+          </button>
+          {!gradingHasRun && <p><em>Run grading first to enable report generation.</em></p>}
+        </div>
+
+        {reportErrorMessage && <p><strong>Report Error:</strong> {reportErrorMessage}</p>}
+
+        {finalReport && (
+          <div>
+            <p><strong>Mode:</strong> {finalReport.gradingMode}</p>
+            <p><strong>Generated At:</strong> {finalReport.generatedAt}</p>
+            <ul>
+              {finalReport.students.map((student) => (
+                <li key={`${student.studentId}-${student.examNumber}`}>
+                  {student.studentId} | Exam {student.examNumber} | Score {student.score} / {student.totalQuestions}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </section>
     </section>
   )
 }

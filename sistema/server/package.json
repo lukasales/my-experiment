@@ -11,7 +11,8 @@
     "check": "tsc --noEmit",
     "bdd:questions": "cucumber-js ../features/question-*.feature --require ./bdd/step-definitions/**/*.js --require ./bdd/support/**/*.js",
     "bdd:exams": "cucumber-js ../features/exam-management.feature ../features/exam-question-linking.feature ../features/exam-editing.feature ../features/exam-removal.feature --require ./bdd/step-definitions/**/*.js --require ./bdd/support/**/*.js",
-    "bdd:generation": "npm run build && cucumber-js ../features/exam-pdf-single.feature ../features/exam-pdf-layout.feature ../features/exam-pdf-batch.feature ../features/exam-randomization.feature ../features/exam-answer-key-csv.feature --require ./bdd/step-definitions/**/*.js --require ./bdd/support/**/*.js"
+    "bdd:generation": "npm run build && cucumber-js ../features/exam-pdf-single.feature ../features/exam-pdf-layout.feature ../features/exam-pdf-batch.feature ../features/exam-randomization.feature ../features/exam-answer-key-csv.feature --require ./bdd/step-definitions/**/*.js --require ./bdd/support/**/*.js",
+    "bdd:grading": "npm run build && cucumber-js ../features/answer-key-import.feature ../features/student-responses-import.feature ../features/strict-grading.feature ../features/lenient-grading.feature ../features/grading-report.feature --require ./bdd/step-definitions/**/*.js --require ./bdd/support/**/*.js"
   },
   "keywords": [],
   "author": "",
