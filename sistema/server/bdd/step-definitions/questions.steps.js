@@ -105,6 +105,37 @@ When('I mark the correct alternatives', function () {
 });
 
 When('I submit the form', function () {
+	if (this.ui.currentScreen === 'exam-create') {
+		const draft = this.pendingExamDraft;
+		const hasRequiredData =
+			draft &&
+			typeof draft.title === 'string' &&
+			draft.title.trim().length > 0 &&
+			(draft.answerMode === 'letters' || draft.answerMode === 'powersOfTwo') &&
+			Array.isArray(draft.questionIds) &&
+			draft.questionIds.length > 0;
+
+		if (!hasRequiredData) {
+			this.ui.validationMessage = 'Please fill in all required fields.';
+			this.lastOperation = 'exam-create-failed-validation';
+			return;
+		}
+
+		const nextExamId = `exam-${this.exams.length + 1}`;
+		const newExam = {
+			id: nextExamId,
+			title: draft.title,
+			answerMode: draft.answerMode,
+			questionIds: [...draft.questionIds],
+		};
+
+		this.exams.push(newExam);
+		this.visibleExams = this.exams.map((exam) => ({ ...exam }));
+		this.lastCreatedExamId = newExam.id;
+		this.lastOperation = 'exam-create-success';
+		return;
+	}
+
 	const draft = this.pendingQuestionDraft;
 	const hasRequiredData =
 		draft &&
@@ -135,6 +166,17 @@ When('I submit the form', function () {
 });
 
 When('I submit the form with missing required data', function () {
+	if (this.ui.currentScreen === 'exam-create') {
+		this.pendingExamDraft = {
+			title: '',
+			answerMode: 'letters',
+			questionIds: [],
+		};
+		this.ui.validationMessage = 'Please fill in all required fields.';
+		this.lastOperation = 'exam-create-failed-validation';
+		return;
+	}
+
 	this.pendingQuestionDraft = {
 		statement: '',
 		alternatives: ['only one'],

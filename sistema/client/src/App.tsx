@@ -64,9 +64,15 @@ function App() {
 
     const missingRequiredData =
       statement.trim().length === 0 || alternatives.some((alternative) => alternative.text.trim().length === 0)
+    const hasAtLeastOneCorrectAlternative = alternatives.some((alternative) => alternative.isCorrect)
 
     if (missingRequiredData) {
       setValidationMessage('Please fill in the statement and all four alternatives.')
+      return
+    }
+
+    if (!hasAtLeastOneCorrectAlternative) {
+      setValidationMessage('Please mark at least one correct alternative.')
       return
     }
 
@@ -140,9 +146,15 @@ function App() {
 
     const missingRequiredData =
       editStatement.trim().length === 0 || editAlternatives.some((alternative) => alternative.text.trim().length === 0)
+    const hasAtLeastOneCorrectAlternative = editAlternatives.some((alternative) => alternative.isCorrect)
 
     if (missingRequiredData) {
       setEditValidationMessage('Please fill in the statement and all four alternatives.')
+      return
+    }
+
+    if (!hasAtLeastOneCorrectAlternative) {
+      setEditValidationMessage('Please mark at least one correct alternative.')
       return
     }
 
@@ -166,74 +178,81 @@ function App() {
   }
 
   return (
-    <main>
-      <ExamSection />
+    <main className="page-shell">
+      <ExamSection questionSyncKey={questions.length} />
 
-      <h1>Closed Questions</h1>
+      <section className="panel section-gap">
+        <h1 className="section-title">Closed Questions</h1>
 
-      {loading ? (
-        <p>Loading...</p>
-      ) : error ? (
-        <p>{error}</p>
-      ) : (
-        <>
-          <form onSubmit={handleSubmit}>
-            <h2>Create Question</h2>
+        {loading ? (
+          <p className="status-message">Loading...</p>
+        ) : error ? (
+          <p className="status-message status-error">{error}</p>
+        ) : (
+          <>
+            <form onSubmit={handleSubmit} className="panel section-gap form-grid">
+              <h2 className="subsection-title">Create Question</h2>
 
-            <label htmlFor="statement">Statement</label>
-            <input
-              id="statement"
-              type="text"
-              value={statement}
-              onChange={(event) => setStatement(event.target.value)}
-            />
+              <label htmlFor="statement">Statement</label>
+              <input
+                id="statement"
+                type="text"
+                value={statement}
+                onChange={(event) => setStatement(event.target.value)}
+              />
 
-            {alternatives.map((alternative, index) => (
-              <div key={`new-alternative-${index}`}>
-                <label htmlFor={`alternative-${index}`}>Alternative {index + 1}</label>
-                <input
-                  id={`alternative-${index}`}
-                  type="text"
-                  value={alternative.text}
-                  onChange={(event) => updateAlternativeText(index, event.target.value)}
-                />
+              {alternatives.map((alternative, index) => (
+                <div key={`new-alternative-${index}`} className="field-row">
+                  <label htmlFor={`alternative-${index}`}>Alternative {index + 1}</label>
+                  <input
+                    id={`alternative-${index}`}
+                    type="text"
+                    value={alternative.text}
+                    onChange={(event) => updateAlternativeText(index, event.target.value)}
+                  />
 
-                <label htmlFor={`alternative-correct-${index}`}>Correct</label>
-                <input
-                  id={`alternative-correct-${index}`}
-                  type="checkbox"
-                  checked={alternative.isCorrect}
-                  onChange={(event) => updateAlternativeCorrect(index, event.target.checked)}
-                />
+                  <label htmlFor={`alternative-correct-${index}`}>Correct</label>
+                  <input
+                    id={`alternative-correct-${index}`}
+                    type="checkbox"
+                    checked={alternative.isCorrect}
+                    onChange={(event) => updateAlternativeCorrect(index, event.target.checked)}
+                  />
+                </div>
+              ))}
+
+              <div className="button-row">
+                <button type="submit" disabled={submitting}>
+                  {submitting ? 'Creating...' : 'Create Question'}
+                </button>
               </div>
-            ))}
 
-            <button type="submit" disabled={submitting}>
-              {submitting ? 'Creating...' : 'Create Question'}
-            </button>
+              {validationMessage && <p className="status-message status-error">{validationMessage}</p>}
+            </form>
 
-            {validationMessage && <p>{validationMessage}</p>}
-          </form>
+            <section className="panel section-gap">
+              <h2 className="subsection-title">Question List</h2>
+              <QuestionList
+                questions={questions}
+                editingQuestionId={editingQuestionId}
+                editStatement={editStatement}
+                editAlternatives={editAlternatives}
+                editValidationMessage={editValidationMessage}
+                editSubmitting={editSubmitting}
+                onStartEdit={startEditQuestion}
+                onCancelEdit={cancelEditQuestion}
+                onEditStatementChange={setEditStatement}
+                onEditAlternativeTextChange={updateEditAlternativeText}
+                onEditAlternativeCorrectChange={updateEditAlternativeCorrect}
+                onEditSubmit={(event, questionId) => void handleEditSubmit(event, questionId)}
+                onRemoveQuestion={(questionId) => void handleRemoveQuestion(questionId)}
+              />
+            </section>
 
-          <QuestionList
-            questions={questions}
-            editingQuestionId={editingQuestionId}
-            editStatement={editStatement}
-            editAlternatives={editAlternatives}
-            editValidationMessage={editValidationMessage}
-            editSubmitting={editSubmitting}
-            onStartEdit={startEditQuestion}
-            onCancelEdit={cancelEditQuestion}
-            onEditStatementChange={setEditStatement}
-            onEditAlternativeTextChange={updateEditAlternativeText}
-            onEditAlternativeCorrectChange={updateEditAlternativeCorrect}
-            onEditSubmit={(event, questionId) => void handleEditSubmit(event, questionId)}
-            onRemoveQuestion={(questionId) => void handleRemoveQuestion(questionId)}
-          />
-
-          {removeErrorMessage && <p>{removeErrorMessage}</p>}
-        </>
-      )}
+            {removeErrorMessage && <p className="status-message status-error">{removeErrorMessage}</p>}
+          </>
+        )}
+      </section>
     </main>
   )
 }

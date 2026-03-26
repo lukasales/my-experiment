@@ -406,19 +406,33 @@ app.get('/grading/report/final', (req, res) => {
 });
 
 app.post('/exams', (req, res) => {
-  const { title, answerMode } = req.body as {
+  const { title, answerMode, questionIds } = req.body as {
     title?: unknown;
     answerMode?: unknown;
+    questionIds?: unknown;
   };
 
   const hasValidTitle = typeof title === 'string' && title.trim().length > 0;
   const hasValidAnswerMode =
     answerMode === 'letters' || answerMode === 'powersOfTwo';
+  const hasValidQuestionIds =
+    Array.isArray(questionIds) &&
+    questionIds.length > 0 &&
+    questionIds.every((questionId) => typeof questionId === 'string');
 
-  if (!hasValidTitle || !hasValidAnswerMode) {
+  if (!hasValidTitle || !hasValidAnswerMode || !hasValidQuestionIds) {
     res.status(400).json({
-      message: 'Title and a valid answer mode are required.',
+      message: 'Title, answer mode, and at least one valid question id are required.',
     });
+    return;
+  }
+
+  const allQuestionsExist = questionIds.every((questionId) =>
+    questions.some((question) => question.id === questionId),
+  );
+
+  if (!allQuestionsExist) {
+    res.status(400).json({ message: 'Question selection contains unknown ids.' });
     return;
   }
 
@@ -426,7 +440,7 @@ app.post('/exams', (req, res) => {
     id: `exam-${Date.now()}`,
     title: title.trim(),
     answerMode,
-    questionIds: [],
+    questionIds,
   };
 
   exams.push(exam);
@@ -517,9 +531,19 @@ app.post('/questions', (req, res) => {
         typeof (alternative as { isCorrect?: unknown }).isCorrect === 'boolean',
     );
 
-  if (!hasValidStatement || !hasValidAlternatives) {
+  const hasAtLeastOneCorrectAlternative =
+    Array.isArray(alternatives) &&
+    alternatives.some(
+      (alternative) =>
+        typeof alternative === 'object' &&
+        alternative !== null &&
+        (alternative as { isCorrect?: unknown }).isCorrect === true,
+    );
+
+  if (!hasValidStatement || !hasValidAlternatives || !hasAtLeastOneCorrectAlternative) {
     res.status(400).json({
-      message: 'Statement and 4 alternatives with text and correctness are required.',
+      message:
+        'Statement and 4 alternatives with text and correctness are required, with at least one correct alternative.',
     });
     return;
   }
@@ -559,9 +583,19 @@ app.put('/questions/:id', (req, res) => {
         typeof (alternative as { isCorrect?: unknown }).isCorrect === 'boolean',
     );
 
-  if (!hasValidStatement || !hasValidAlternatives) {
+  const hasAtLeastOneCorrectAlternative =
+    Array.isArray(alternatives) &&
+    alternatives.some(
+      (alternative) =>
+        typeof alternative === 'object' &&
+        alternative !== null &&
+        (alternative as { isCorrect?: unknown }).isCorrect === true,
+    );
+
+  if (!hasValidStatement || !hasValidAlternatives || !hasAtLeastOneCorrectAlternative) {
     res.status(400).json({
-      message: 'Statement and 4 alternatives with text and correctness are required.',
+      message:
+        'Statement and 4 alternatives with text and correctness are required, with at least one correct alternative.',
     });
     return;
   }

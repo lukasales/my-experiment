@@ -1,6 +1,86 @@
 const assert = require('node:assert/strict');
 const { Given, When, Then } = require('@cucumber/cucumber');
 
+Given('the exam creation form is visible', function () {
+  this.ui.currentScreen = 'exam-create';
+  this.ui.examCreationFormVisible = true;
+});
+
+When('I fill the exam title', function () {
+  const selectedQuestionIds = this.questions.slice(0, 1).map((question) => question.id);
+
+  this.pendingExamDraft = {
+    title: 'New Exam',
+    answerMode: 'letters',
+    questionIds: selectedQuestionIds,
+  };
+});
+
+When('I choose an answer mode', function () {
+  assert.ok(this.pendingExamDraft, 'Expected an exam draft before choosing answer mode');
+  this.pendingExamDraft.answerMode = 'powersOfTwo';
+});
+
+Then('the exam should be created successfully', function () {
+  assert.equal(this.lastOperation, 'exam-create-success');
+  assert.ok(this.lastCreatedExamId);
+});
+
+Then('the new exam should appear in the visible exam list', function () {
+  assert.ok(this.visibleExams.some((exam) => exam.id === this.lastCreatedExamId));
+});
+
+Then('the exam should not be created', function () {
+  assert.notEqual(this.lastOperation, 'exam-create-success');
+});
+
+Given('the frontend is open', function () {
+  this.ui.currentScreen = 'exam-list';
+  this.ui.examListVisible = true;
+});
+
+Given(/^the backend returns success for GET \/exams$/, function () {
+  this.backend.getExamsOutcome = 'success';
+});
+
+Given(/^GET \/exams fails$/, function () {
+  this.backend.getExamsOutcome = 'error';
+});
+
+When('the exams screen loads', function () {
+  this.requestLog.push('GET /exams');
+
+  if (this.backend.getExamsOutcome === 'error') {
+    this.ui.loading = false;
+    this.ui.errorMessage = 'Could not load exams';
+    return;
+  }
+
+  this.ui.loading = false;
+  this.visibleExams = this.exams.map((exam) => ({ ...exam }));
+});
+
+Then(/^the frontend should fetch GET \/exams$/, function () {
+  assert.ok(this.requestLog.includes('GET /exams'));
+});
+
+Then('it should display a list of exams', function () {
+  assert.ok(Array.isArray(this.visibleExams));
+  assert.ok(this.visibleExams.length >= 1);
+});
+
+Then('each exam should show its title', function () {
+  assert.ok(this.visibleExams.every((exam) => typeof exam.title === 'string' && exam.title.length > 0));
+});
+
+Then('each exam should show its answer mode', function () {
+  assert.ok(
+    this.visibleExams.every(
+      (exam) => exam.answerMode === 'letters' || exam.answerMode === 'powersOfTwo',
+    ),
+  );
+});
+
 Given('the exam list is visible', function () {
   this.ui.currentScreen = 'exam-list';
   this.ui.examListVisible = true;

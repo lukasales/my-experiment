@@ -73,11 +73,12 @@ export async function buildSingleExamPdf({
     y -= lineHeight;
   };
 
+  drawLine('Discipline: ________________________________');
+  drawLine('Professor: _________________________________');
+  drawLine('Date: ____/____/________');
   drawLine(`Title: ${examTitle}`, 16);
   drawLine(`Exam ID: ${examId}`);
   drawLine(`Answer Mode: ${answerMode}`);
-  drawLine('Student Name: ________________________________');
-  drawLine('CPF: _________________________________________');
   drawLine('');
 
   questions.forEach((question, questionIndex) => {
@@ -88,8 +89,17 @@ export async function buildSingleExamPdf({
       drawLine(`   ${alternativeLabel}) ${alternative}`);
     });
 
+    if (answerMode === 'letters') {
+      drawLine('   Answer (letters): ________________________________');
+    } else {
+      drawLine('   Answer (sum): ________________________________');
+    }
+
     drawLine('');
   });
+
+  drawLine('Student Name: ________________________________');
+  drawLine('CPF: _________________________________________');
 
   return pdfDoc.save();
 }

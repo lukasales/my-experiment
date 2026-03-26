@@ -19,13 +19,18 @@ import type { AnswerMode, Exam } from '../types/exam'
 import type { Question } from '../types/question'
 import { ExamList } from './ExamList'
 
-export function ExamSection() {
+type ExamSectionProps = {
+  questionSyncKey: number
+}
+
+export function ExamSection({ questionSyncKey }: ExamSectionProps) {
   const [exams, setExams] = useState<Exam[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [questions, setQuestions] = useState<Question[]>([])
   const [title, setTitle] = useState('')
   const [answerMode, setAnswerMode] = useState<AnswerMode>('letters')
+  const [createSelectedQuestionIds, setCreateSelectedQuestionIds] = useState<string[]>([])
   const [validationMessage, setValidationMessage] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [editingExamId, setEditingExamId] = useState<string | null>(null)
@@ -77,12 +82,12 @@ export function ExamSection() {
 
   useEffect(() => {
     void fetchQuestions()
-  }, [])
+  }, [questionSyncKey])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
-    if (title.trim().length === 0) {
+    if (title.trim().length === 0 || createSelectedQuestionIds.length === 0) {
       setValidationMessage('Please fill in all required fields.')
       return
     }
@@ -94,11 +99,13 @@ export function ExamSection() {
       const createdExam = await createExam({
         title,
         answerMode,
+        questionIds: createSelectedQuestionIds,
       })
 
       setExams((previous) => [...previous, createdExam])
       setTitle('')
       setAnswerMode('letters')
+      setCreateSelectedQuestionIds([])
     } catch {
       setValidationMessage('Could not create exam. Please try again.')
     } finally {
@@ -181,6 +188,16 @@ export function ExamSection() {
       ...previous,
       [examId]: value,
     }))
+  }
+
+  const handleCreateQuestionToggle = (questionId: string, checked: boolean) => {
+    setCreateSelectedQuestionIds((previous) => {
+      if (checked) {
+        return previous.includes(questionId) ? previous : [...previous, questionId]
+      }
+
+      return previous.filter((id) => id !== questionId)
+    })
   }
 
   const handleDownloadSinglePdf = async (examId: string) => {
@@ -285,9 +302,11 @@ export function ExamSection() {
   }
 
   return (
-    <section>
-      <form onSubmit={handleSubmit}>
-        <h1>Create Exam</h1>
+    <section className='panel section-gap'>
+      <h1 className='section-title'>Exam Management</h1>
+
+      <form onSubmit={handleSubmit} className='panel section-gap form-grid'>
+        <h2 className='subsection-title'>Create Exam</h2>
 
         <label htmlFor='exam-title'>Title</label>
         <input
@@ -307,45 +326,67 @@ export function ExamSection() {
           <option value='powersOfTwo'>powersOfTwo</option>
         </select>
 
-        <button type='submit' disabled={submitting}>
-          {submitting ? 'Creating...' : 'Create Exam'}
-        </button>
+        <h3 className='subsection-title'>Select Questions</h3>
+        {questions.length === 0 ? (
+          <p className='status-message'>No questions available for selection.</p>
+        ) : (
+          questions.map((question) => (
+            <div key={`create-exam-question-${question.id}`} className='checkbox-row'>
+              <label htmlFor={`create-exam-question-${question.id}`}>{question.statement}</label>
+              <input
+                id={`create-exam-question-${question.id}`}
+                type='checkbox'
+                checked={createSelectedQuestionIds.includes(question.id)}
+                onChange={(event) => handleCreateQuestionToggle(question.id, event.target.checked)}
+              />
+            </div>
+          ))
+        )}
 
-        {validationMessage && <p>{validationMessage}</p>}
+        <div className='button-row'>
+          <button type='submit' disabled={submitting}>
+            {submitting ? 'Creating...' : 'Create Exam'}
+          </button>
+        </div>
+
+        {validationMessage && <p className='status-message status-error'>{validationMessage}</p>}
       </form>
 
-      <ExamList
-        exams={exams}
-        questions={questions}
-        loading={loading}
-        error={error}
-        editingExamId={editingExamId}
-        editTitle={editTitle}
-        editAnswerMode={editAnswerMode}
-        selectedQuestionIds={selectedQuestionIds}
-        linkValidationMessage={linkValidationMessage}
-        linkSubmitting={linkSubmitting}
-        onStartLink={handleStartLink}
-        onCancelLink={handleCancelLink}
-        onEditTitleChange={setEditTitle}
-        onEditAnswerModeChange={setEditAnswerMode}
-        onToggleQuestion={handleToggleQuestion}
-        onSaveQuestionLinks={handleSaveQuestionLinks}
-        onRemoveExam={handleRemoveExam}
-        onDownloadSinglePdf={handleDownloadSinglePdf}
-        onDownloadBatchZip={handleDownloadBatchZip}
-        onDownloadAnswerKeyCsv={handleDownloadAnswerKeyCsv}
-        batchCountByExamId={batchCountByExamId}
-        onBatchCountChange={handleBatchCountChange}
-      />
+      <section className='panel section-gap'>
+        <h2 className='subsection-title'>Exam List</h2>
+        <ExamList
+          exams={exams}
+          questions={questions}
+          loading={loading}
+          error={error}
+          editingExamId={editingExamId}
+          editTitle={editTitle}
+          editAnswerMode={editAnswerMode}
+          selectedQuestionIds={selectedQuestionIds}
+          linkValidationMessage={linkValidationMessage}
+          linkSubmitting={linkSubmitting}
+          onStartLink={handleStartLink}
+          onCancelLink={handleCancelLink}
+          onEditTitleChange={setEditTitle}
+          onEditAnswerModeChange={setEditAnswerMode}
+          onToggleQuestion={handleToggleQuestion}
+          onSaveQuestionLinks={handleSaveQuestionLinks}
+          onRemoveExam={handleRemoveExam}
+          onDownloadSinglePdf={handleDownloadSinglePdf}
+          onDownloadBatchZip={handleDownloadBatchZip}
+          onDownloadAnswerKeyCsv={handleDownloadAnswerKeyCsv}
+          batchCountByExamId={batchCountByExamId}
+          onBatchCountChange={handleBatchCountChange}
+        />
+      </section>
 
-      {removeErrorMessage && <p>{removeErrorMessage}</p>}
-      {generationErrorMessage && <p>{generationErrorMessage}</p>}
+      {removeErrorMessage && <p className='status-message status-error'>{removeErrorMessage}</p>}
+      {generationErrorMessage && <p className='status-message status-error'>{generationErrorMessage}</p>}
 
-      <section>
-        <h2>Grading Workflow</h2>
+      <section className='panel section-gap'>
+        <h2 className='subsection-title'>Grading Workflow</h2>
 
-        <div>
+        <div className='panel section-gap'>
           <h3>Step 1: Import Answer Key</h3>
           <label htmlFor='answer-key-content'>Answer Key CSV (paste content below)</label>
           <textarea
@@ -364,7 +405,7 @@ export function ExamSection() {
           </button>
         </div>
 
-        <div>
+        <div className='panel section-gap'>
           <h3>Step 2: Import Student Responses</h3>
           <label htmlFor='student-responses-content'>Student Responses CSV (paste content below)</label>
           <textarea
@@ -383,7 +424,7 @@ export function ExamSection() {
           </button>
         </div>
 
-        <div>
+        <div className='panel section-gap'>
           <h3>Step 3: Run Grading</h3>
           <label htmlFor='grading-mode'>Grading mode</label>
           <select
@@ -403,9 +444,9 @@ export function ExamSection() {
           </button>
         </div>
 
-        {gradingMessage && <p><strong>Grading:</strong> {gradingMessage}</p>}
+        {gradingMessage && <p className='status-message status-success'><strong>Grading:</strong> {gradingMessage}</p>}
 
-        <div>
+        <div className='panel section-gap'>
           <h3>Step 4: Generate Final Report</h3>
           <button
             type='button'
@@ -414,16 +455,16 @@ export function ExamSection() {
           >
             Generate Final Report
           </button>
-          {!gradingHasRun && <p><em>Run grading first to enable report generation.</em></p>}
+          {!gradingHasRun && <p className='status-message'><em>Run grading first to enable report generation.</em></p>}
         </div>
 
-        {reportErrorMessage && <p><strong>Report Error:</strong> {reportErrorMessage}</p>}
+        {reportErrorMessage && <p className='status-message status-error'><strong>Report Error:</strong> {reportErrorMessage}</p>}
 
         {finalReport && (
-          <div>
+          <div className='panel section-gap'>
             <p><strong>Mode:</strong> {finalReport.gradingMode}</p>
             <p><strong>Generated At:</strong> {finalReport.generatedAt}</p>
-            <ul>
+            <ul className='simple-list'>
               {finalReport.students.map((student) => (
                 <li key={`${student.studentId}-${student.examNumber}`}>
                   {student.studentId} | Exam {student.examNumber} | Score {student.score} / {student.totalQuestions}

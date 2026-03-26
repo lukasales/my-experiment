@@ -35,6 +35,7 @@ class QuestionsWorld {
     this.visibleExams = this.exams.map((exam) => ({ ...exam }));
     this.lastResponse = null;
     this.pendingQuestionDraft = null;
+    this.pendingExamDraft = null;
     this.pendingEditedQuestion = null;
     this.pendingEditedExam = null;
 
@@ -44,11 +45,13 @@ class QuestionsWorld {
     this.lastUpdatedQuestionId = null;
     this.lastUpdatedExamId = null;
     this.lastRemovedExamId = null;
+    this.lastCreatedExamId = null;
 
     this.requestLog = [];
 
     this.backend = {
       getQuestionsOutcome: 'success',
+      getExamsOutcome: 'success',
       removeQuestionOutcome: 'success',
       removeExamOutcome: 'success',
     };
@@ -59,6 +62,7 @@ class QuestionsWorld {
       questionCreationFormVisible: false,
       questionEditFormVisible: false,
       examListVisible: false,
+      examCreationFormVisible: false,
       examEditFormVisible: false,
       loading: false,
       errorMessage: '',

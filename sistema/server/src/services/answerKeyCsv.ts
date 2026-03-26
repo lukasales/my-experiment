@@ -24,6 +24,10 @@ function formatQuestionAnswerKey(
   indexes: number[],
   answerMode: AnswerMode,
 ): string {
+  if (answerMode === 'powersOfTwo') {
+    return String(indexes.reduce((sum, index) => sum + 2 ** index, 0));
+  }
+
   return indexes
     .map((index) => formatAlternative(index, answerMode))
     .join('+');

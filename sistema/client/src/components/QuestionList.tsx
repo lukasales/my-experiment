@@ -33,11 +33,11 @@ export function QuestionList({
   onRemoveQuestion,
 }: QuestionListProps) {
   return (
-    <ul>
+    <ul className='card-list'>
       {questions.map((question) => (
-        <li key={question.id}>
+        <li key={question.id} className='card-item section-gap'>
           {editingQuestionId === question.id ? (
-            <form onSubmit={(event) => onEditSubmit(event, question.id)}>
+            <form onSubmit={(event) => onEditSubmit(event, question.id)} className='form-grid'>
               <h2>Edit Question</h2>
 
               <label htmlFor={`edit-statement-${question.id}`}>Statement</label>
@@ -49,7 +49,7 @@ export function QuestionList({
               />
 
               {editAlternatives.map((alternative, index) => (
-                <div key={`edit-alternative-${question.id}-${index}`}>
+                <div key={`edit-alternative-${question.id}-${index}`} className='field-row'>
                   <label htmlFor={`edit-alternative-${question.id}-${index}`}>Alternative {index + 1}</label>
                   <input
                     id={`edit-alternative-${question.id}-${index}`}
@@ -68,31 +68,35 @@ export function QuestionList({
                 </div>
               ))}
 
-              <button type="submit" disabled={editSubmitting}>
-                {editSubmitting ? 'Saving...' : 'Save'}
-              </button>
-              <button type="button" onClick={onCancelEdit}>
-                Cancel
-              </button>
+              <div className='button-row'>
+                <button type="submit" disabled={editSubmitting}>
+                  {editSubmitting ? 'Saving...' : 'Save'}
+                </button>
+                <button type="button" onClick={onCancelEdit}>
+                  Cancel
+                </button>
+              </div>
 
-              {editValidationMessage && <p>{editValidationMessage}</p>}
+              {editValidationMessage && <p className='status-message status-error'>{editValidationMessage}</p>}
             </form>
           ) : (
-            <>
-              <h2>{question.statement}</h2>
-              <button type="button" onClick={() => onStartEdit(question)}>
-                Edit
-              </button>
-              <button type="button" onClick={() => onRemoveQuestion(question.id)}>
-                Remove
-              </button>
+            <div className='section-gap'>
+              <h3>{question.statement}</h3>
+              <div className='button-row'>
+                <button type="button" onClick={() => onStartEdit(question)}>
+                  Edit
+                </button>
+                <button type="button" onClick={() => onRemoveQuestion(question.id)}>
+                  Remove
+                </button>
+              </div>
 
-              <ul>
+              <ul className='simple-list'>
                 {question.alternatives.map((alternative, index) => (
                   <li key={`${question.id}-${index}`}>{alternative.text}</li>
                 ))}
               </ul>
-            </>
+            </div>
           )}
         </li>
       ))}
