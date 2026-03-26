@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'react'
-import { createExam, deleteExam, getExams, updateExam } from '../services/exams'
+import {
+  createExam,
+  deleteExam,
+  downloadAnswerKeyCsv,
+  downloadBatchExamZip,
+  downloadSingleExamPdf,
+  getExams,
+  updateExam,
+} from '../services/exams'
 import { getQuestions } from '../services/questions'
 import type { AnswerMode, Exam } from '../types/exam'
 import type { Question } from '../types/question'
@@ -21,6 +29,8 @@ export function ExamSection() {
   const [linkValidationMessage, setLinkValidationMessage] = useState<string | null>(null)
   const [linkSubmitting, setLinkSubmitting] = useState(false)
   const [removeErrorMessage, setRemoveErrorMessage] = useState<string | null>(null)
+  const [generationErrorMessage, setGenerationErrorMessage] = useState<string | null>(null)
+  const [batchCountByExamId, setBatchCountByExamId] = useState<Record<string, string>>({})
 
   const fetchExams = async () => {
     try {
@@ -152,6 +162,45 @@ export function ExamSection() {
     }
   }
 
+  const handleBatchCountChange = (examId: string, value: string) => {
+    setBatchCountByExamId((previous) => ({
+      ...previous,
+      [examId]: value,
+    }))
+  }
+
+  const handleDownloadSinglePdf = async (examId: string) => {
+    try {
+      setGenerationErrorMessage(null)
+      await downloadSingleExamPdf(examId)
+    } catch {
+      setGenerationErrorMessage('Unable to download single PDF.')
+    }
+  }
+
+  const handleDownloadBatchZip = async (examId: string, count: number) => {
+    if (!Number.isInteger(count) || count < 1) {
+      setGenerationErrorMessage('Batch count must be a positive integer.')
+      return
+    }
+
+    try {
+      setGenerationErrorMessage(null)
+      await downloadBatchExamZip(examId, count)
+    } catch {
+      setGenerationErrorMessage('Unable to download batch ZIP.')
+    }
+  }
+
+  const handleDownloadAnswerKeyCsv = async (examId: string) => {
+    try {
+      setGenerationErrorMessage(null)
+      await downloadAnswerKeyCsv(examId)
+    } catch {
+      setGenerationErrorMessage('Unable to download answer-key CSV. Generate a batch first.')
+    }
+  }
+
   return (
     <section>
       <form onSubmit={handleSubmit}>
@@ -200,9 +249,15 @@ export function ExamSection() {
         onToggleQuestion={handleToggleQuestion}
         onSaveQuestionLinks={handleSaveQuestionLinks}
         onRemoveExam={handleRemoveExam}
+        onDownloadSinglePdf={handleDownloadSinglePdf}
+        onDownloadBatchZip={handleDownloadBatchZip}
+        onDownloadAnswerKeyCsv={handleDownloadAnswerKeyCsv}
+        batchCountByExamId={batchCountByExamId}
+        onBatchCountChange={handleBatchCountChange}
       />
 
       {removeErrorMessage && <p>{removeErrorMessage}</p>}
+      {generationErrorMessage && <p>{generationErrorMessage}</p>}
     </section>
   )
 }

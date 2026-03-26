@@ -20,6 +20,11 @@ type ExamListProps = {
   onToggleQuestion: (questionId: string, checked: boolean) => void
   onSaveQuestionLinks: (examId: string) => void
   onRemoveExam: (examId: string) => void
+  onDownloadSinglePdf: (examId: string) => void
+  onDownloadBatchZip: (examId: string, count: number) => void
+  onDownloadAnswerKeyCsv: (examId: string) => void
+  batchCountByExamId: Record<string, string>
+  onBatchCountChange: (examId: string, value: string) => void
 }
 
 export function ExamList({
@@ -40,6 +45,11 @@ export function ExamList({
   onToggleQuestion,
   onSaveQuestionLinks,
   onRemoveExam,
+  onDownloadSinglePdf,
+  onDownloadBatchZip,
+  onDownloadAnswerKeyCsv,
+  batchCountByExamId,
+  onBatchCountChange,
 }: ExamListProps) {
   if (loading) {
     return <p>Loading exams...</p>
@@ -113,6 +123,29 @@ export function ExamList({
                   </button>
                   <button type='button' onClick={() => onRemoveExam(exam.id)}>
                     Remove
+                  </button>
+                  <button type='button' onClick={() => onDownloadSinglePdf(exam.id)}>
+                    Download PDF
+                  </button>
+
+                  <label htmlFor={`batch-count-${exam.id}`}>Batch count</label>
+                  <input
+                    id={`batch-count-${exam.id}`}
+                    type='number'
+                    min={1}
+                    value={batchCountByExamId[exam.id] ?? '1'}
+                    onChange={(event) => onBatchCountChange(exam.id, event.target.value)}
+                  />
+
+                  <button
+                    type='button'
+                    onClick={() => onDownloadBatchZip(exam.id, Number(batchCountByExamId[exam.id] ?? '1'))}
+                  >
+                    Download Batch ZIP
+                  </button>
+
+                  <button type='button' onClick={() => onDownloadAnswerKeyCsv(exam.id)}>
+                    Download Answer-Key CSV
                   </button>
                 </>
               )}
