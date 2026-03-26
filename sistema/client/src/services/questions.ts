@@ -1,6 +1,7 @@
 import type { Question, QuestionInput } from '../types/question'
+import { buildApiUrl } from './api'
 
-const QUESTIONS_API_URL = 'http://localhost:3001/questions'
+const QUESTIONS_API_URL = buildApiUrl('questions')
 
 export const getQuestions = async (): Promise<Question[]> => {
   const response = await fetch(QUESTIONS_API_URL)

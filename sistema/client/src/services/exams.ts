@@ -1,7 +1,8 @@
 import type { CreateExamPayload, Exam, UpdateExamPayload } from '../types/exam'
+import { buildApiUrl } from './api'
 
-const EXAMS_API_URL = 'http://localhost:3001/exams'
-const GRADING_API_URL = 'http://localhost:3001/grading'
+const EXAMS_API_URL = buildApiUrl('exams')
+const GRADING_API_URL = buildApiUrl('grading')
 
 export type FinalGradingReport = {
   gradingMode: 'strict' | 'lenient'

@@ -26,7 +26,17 @@ import { buildSingleExamPdf } from './services/examPdf';
 
 export const app = express();
 
-app.use(cors());
+const frontendUrl = process.env.FRONTEND_URL;
+
+app.use(
+  cors(
+    frontendUrl
+      ? {
+          origin: frontendUrl,
+        }
+      : undefined,
+  ),
+);
 app.use(express.json());
 
 type Alternative = {
@@ -589,7 +599,8 @@ app.delete('/questions/:id', (req, res) => {
   res.status(204).send();
 });
 
-const PORT = 3001;
+const configuredPort = Number(process.env.PORT);
+const PORT = Number.isInteger(configuredPort) && configuredPort > 0 ? configuredPort : 3001;
 
 if (require.main === module) {
   app.listen(PORT, () => {
